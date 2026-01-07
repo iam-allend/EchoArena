@@ -1,0 +1,71 @@
+# Development Checklist
+
+## Week 1: Foundation (Jan 8-14)
+
+### Day 1-2: Authentication
+- [ ] Register page UI
+- [ ] Login page UI
+- [ ] Supabase Auth integration
+- [ ] Protected routes middleware
+- [ ] User dashboard
+
+### Day 3-4: Room System
+- [ ] Create room API
+- [ ] Join room API
+- [ ] Room lobby UI
+- [ ] Participant list (real-time)
+- [ ] Room code generation
+
+### Day 5-7: Game Mechanics
+- [ ] Stage system
+- [ ] Turn queue logic
+- [ ] Question display
+- [ ] Timer component
+- [ ] Answer validation
+
+## Week 2: Voice & Features (Jan 15-21)
+
+### Day 8-10: Voice Integration
+- [ ] Daily.co setup
+- [ ] Voice room creation
+- [ ] Mic permissions
+- [ ] Mute/unmute logic
+- [ ] Turn-based audio control
+
+### Day 11-12: Speech Recognition
+- [ ] Web Speech API setup
+- [ ] Voice recognition component
+- [ ] Answer parsing (A/B/C/D)
+- [ ] Text fallback
+- [ ] Error handling
+
+### Day 13-14: Admin Panel
+- [ ] Admin auth
+- [ ] User management table
+- [ ] Question CRUD
+- [ ] Basic analytics
+
+## Week 3: Polish & Ship (Jan 22-28)
+
+### Day 15-16: UI/UX
+- [ ] Responsive design
+- [ ] Animations
+- [ ] Loading states
+- [ ] Error states
+
+### Day 17-18: Content
+- [ ] Write proposal
+- [ ] Record video demo
+- [ ] Edit video
+- [ ] Prepare submission
+
+### Day 19-21: Launch
+- [ ] Deploy to Vercel
+- [ ] Final testing
+- [ ] Submit to lomba
+- [ ] Celebrate! 🎉
+
+## Daily Standup Questions
+1. What did I do yesterday?
+2. What will I do today?
+3. Any blockers?
