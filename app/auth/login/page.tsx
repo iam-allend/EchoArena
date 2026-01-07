@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { clearGuestAccount } from '@/lib/auth/guest'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -27,7 +28,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
@@ -35,10 +36,12 @@ export default function LoginPage() {
       if (loginError) throw loginError
 
       // Clear any guest data
-      localStorage.removeItem('guest_account')
+      clearGuestAccount()
       localStorage.setItem('auth_mode', 'registered')
 
+      // Redirect to dashboard
       router.push('/dashboard')
+      router.refresh()
     } catch (err: any) {
       console.error('Login error:', err)
       setError(err.message || 'Login failed. Please check your credentials.')
@@ -52,7 +55,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Login to continue your journey</CardDescription>
+          <CardDescription>Login to continue your journey in EchoArena</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleLogin}>
@@ -102,14 +105,14 @@ export default function LoginPage() {
 
             <p className="text-sm text-center text-gray-600">
               Don't have an account?{' '}
-              <Link href="/auth/register" className="text-purple-600 hover:underline">
+              <Link href="/auth/register" className="text-purple-600 hover:underline font-semibold">
                 Register
               </Link>
             </p>
 
             <p className="text-sm text-center text-gray-600">
               Or{' '}
-              <Link href="/" className="text-purple-600 hover:underline">
+              <Link href="/" className="text-purple-600 hover:underline font-semibold">
                 play as guest
               </Link>
             </p>

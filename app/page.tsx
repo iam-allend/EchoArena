@@ -1,19 +1,68 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { createGuestAccount } from '@/lib/auth/guest'
+import { createGuestAccount, getGuestAccountFromStorage } from '@/lib/auth/guest'
+import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    // Check if user already logged in
+    checkExistingAuth()
+  }, [])
+
+  async function checkExistingAuth() {
+    setCheckingAuth(true)
+
+    try {
+      const supabase = createClient()
+
+      // Check registered user session
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        // Already logged in as registered user
+        router.push('/dashboard')
+        return
+      }
+
+      // Check guest account
+      const guestAccount = getGuestAccountFromStorage()
+      
+      if (guestAccount) {
+        // Already has guest account
+        router.push('/dashboard')
+        return
+      }
+
+      // No auth - stay on landing page
+    } catch (error) {
+      console.error('Auth check error:', error)
+    } finally {
+      setCheckingAuth(false)
+    }
+  }
 
   async function handlePlayAsGuest() {
     setLoading(true)
 
     try {
+      // Check if guest already exists
+      const existingGuest = getGuestAccountFromStorage()
+      
+      if (existingGuest) {
+        // Already has guest account, just redirect
+        router.push('/dashboard')
+        return
+      }
+
+      // Create new guest account
       await createGuestAccount()
       router.push('/dashboard')
     } catch (error) {
@@ -22,6 +71,15 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading while checking auth
+  if (checkingAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </main>
+    )
   }
 
   return (

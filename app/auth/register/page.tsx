@@ -38,29 +38,89 @@ export default function RegisterPage() {
       return
     }
 
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters')
+      return
+    }
+
     setLoading(true)
 
     try {
-      // 1. Create auth user
+      // 1. Check if username already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('username')
+        .eq('username', formData.username)
+        .maybeSingle() // Changed from .single() to avoid error if not found
+
+      if (existingUser) {
+        setError('Username already taken')
+        setLoading(false)
+        return
+      }
+
+      // 2. Create Supabase Auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        }
       })
 
       if (authError) throw authError
 
-      // 2. Create user record
-      const { error: dbError } = await supabase.from('users').insert({
-        id: authData.user!.id,
-        username: formData.username,
-        email: formData.email,
-        is_guest: false,
-      })
+      if (!authData.user) {
+        throw new Error('User creation failed')
+      }
 
-      if (dbError) throw dbError
+      console.log('Auth user created:', authData.user.id)
 
-      // 3. Redirect to dashboard
+      // 3. Create user record in database
+      const { data: newUser, error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          username: formData.username,
+          email: formData.email,
+          is_guest: false,
+          level: 1,
+          xp: 0,
+          coins: 100,
+          total_wins: 0,
+          total_games: 0,
+        })
+        .select()
+        .single()
+
+      if (dbError) {
+        console.error('Database insert error:', dbError)
+        throw dbError
+      }
+
+      console.log('Database user created:', newUser)
+
+      // 4. Set auth mode
+      localStorage.setItem('auth_mode', 'registered')
+
+      // 5. Wait a bit for session to be established
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // 6. Check if session is created
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Session after signup:', session ? 'exists' : 'null')
+
+      if (!session) {
+        // Email confirmation required
+        alert('Please check your email to confirm your account, then login.')
+        router.push('/auth/login')
+        return
+      }
+
+      // 7. Redirect to dashboard
+      console.log('Redirecting to dashboard...')
       router.push('/dashboard')
+      router.refresh()
     } catch (err: any) {
       console.error('Registration error:', err)
       setError(err.message || 'Registration failed. Please try again.')
@@ -96,6 +156,7 @@ export default function RegisterPage() {
                 minLength={3}
                 maxLength={20}
               />
+              <p className="text-xs text-gray-500">3-20 characters, will be visible to other players</p>
             </div>
 
             <div className="space-y-2">
@@ -121,6 +182,7 @@ export default function RegisterPage() {
                 required
                 minLength={8}
               />
+              <p className="text-xs text-gray-500">Minimum 8 characters</p>
             </div>
 
             <div className="space-y-2">
@@ -150,14 +212,14 @@ export default function RegisterPage() {
 
             <p className="text-sm text-center text-gray-600">
               Already have an account?{' '}
-              <Link href="/auth/login" className="text-purple-600 hover:underline">
+              <Link href="/auth/login" className="text-purple-600 hover:underline font-semibold">
                 Login
               </Link>
             </p>
 
             <p className="text-sm text-center text-gray-600">
               Or{' '}
-              <Link href="/" className="text-purple-600 hover:underline">
+              <Link href="/" className="text-purple-600 hover:underline font-semibold">
                 play as guest
               </Link>
             </p>
