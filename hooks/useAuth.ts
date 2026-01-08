@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@/types'
 import {
@@ -16,39 +16,46 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const [expiresAt, setExpiresAt] = useState<Date | null>(null)
 
+  // ✅ FIX 1: Create supabase client ONCE, not in callback dependency
   const supabase = createClient()
 
-  const checkAuth = useCallback(async () => {
-    setLoading(true)
-
+  // ✅ FIX 2: Remove useCallback - not needed, causes re-render issues
+  async function checkAuth() {
+    console.log('🔍 checkAuth called')
+    
     try {
       // Priority 1: Check for registered user session
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
+      console.log('📋 Session check:', session ? 'found' : 'not found')
+
       if (session) {
-        // Has valid Supabase Auth session → Registered user
+        console.log('✅ Loading registered user...')
         await loadRegisteredUser(session.user.id)
         setIsGuest(false)
         localStorage.setItem('auth_mode', 'registered')
-        return // Exit early
+        setLoading(false) // ✅ Set loading false here
+        return
       }
 
-      // Priority 2: Check for guest account in localStorage
+      // Priority 2: Check for guest account
       const guestAccount = getGuestAccountFromStorage()
 
+      console.log('📋 Guest account check:', guestAccount ? 'found' : 'not found')
+
       if (guestAccount) {
-        // Check if guest is expired
         if (isGuestExpired(guestAccount.expiresAt)) {
-          console.log('Guest account expired, clearing...')
+          console.log('⏰ Guest expired, clearing...')
           clearGuestAccount()
           setUser(null)
           setIsGuest(false)
-          return // Exit early
+          setLoading(false) // ✅ Set loading false here
+          return
         }
 
-        // Valid guest account → Load from database
+        console.log('✅ Loading guest user...')
         const guestUser = await loadGuestUser(guestAccount.id)
 
         if (guestUser) {
@@ -56,57 +63,31 @@ export function useAuth() {
           setIsGuest(true)
           setExpiresAt(guestAccount.expiresAt)
           localStorage.setItem('auth_mode', 'guest')
-
-          // Update last active timestamp
           updateGuestActivity(guestAccount.id)
         } else {
-          // Guest not found in DB (maybe deleted)
-          console.log('Guest not found in database, clearing localStorage')
+          console.log('❌ Guest not found in DB')
           clearGuestAccount()
           setUser(null)
           setIsGuest(false)
         }
-      } else {
-        // No auth at all
-        setUser(null)
-        setIsGuest(false)
+        
+        setLoading(false) // ✅ Set loading false here
+        return
       }
-    } catch (error) {
-      console.error('Auth check error:', error)
+
+      // No auth
+      console.log('ℹ️ No authentication found')
       setUser(null)
       setIsGuest(false)
-    } finally {
-      // ALWAYS set loading to false, even on error
-      setLoading(false)
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    // Initial auth check
-    checkAuth()
-
-    // Subscribe to Supabase auth changes (for registered users)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event)
+      setLoading(false) // ✅ Set loading false here
       
-      if (event === 'SIGNED_IN' && session) {
-        await loadRegisteredUser(session.user.id)
-        setIsGuest(false)
-        setLoading(false)
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setIsGuest(false)
-        setExpiresAt(null)
-        setLoading(false)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
+    } catch (error) {
+      console.error('❌ Auth check error:', error)
+      setUser(null)
+      setIsGuest(false)
+      setLoading(false) // ✅ Always set loading false in catch
     }
-  }, [checkAuth, supabase])
+  }
 
   async function loadRegisteredUser(userId: string): Promise<User | null> {
     try {
@@ -126,7 +107,7 @@ export function useAuth() {
 
       return null
     } catch (error) {
-      console.error('Error loading registered user:', error)
+      console.error('❌ Error loading registered user:', error)
       return null
     }
   }
@@ -144,26 +125,84 @@ export function useAuth() {
 
       return data
     } catch (error) {
-      console.error('Error loading guest user:', error)
+      console.error('❌ Error loading guest user:', error)
       return null
     }
   }
 
   async function logout() {
     if (isGuest) {
-      // Guest logout: just clear localStorage
       clearGuestAccount()
       setUser(null)
       setIsGuest(false)
       setExpiresAt(null)
     } else {
-      // Registered user logout: Supabase signout
       await supabase.auth.signOut()
       localStorage.removeItem('auth_mode')
       setUser(null)
       setIsGuest(false)
     }
   }
+
+  // ✅ FIX 3: Simplify useEffect - run ONCE on mount
+  useEffect(() => {
+    console.log('🚀 useAuth mounted')
+    
+    let mounted = true
+    let authSubscription: any = null
+
+    async function initialize() {
+      // Check auth
+      await checkAuth()
+
+      // Setup subscription AFTER initial check
+      if (mounted) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('🔔 Auth state changed:', event)
+            
+            if (!mounted) return
+
+            if (event === 'SIGNED_IN' && session) {
+              await loadRegisteredUser(session.user.id)
+              setIsGuest(false)
+              setLoading(false)
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null)
+              setIsGuest(false)
+              setExpiresAt(null)
+              setLoading(false)
+            }
+          }
+        )
+        
+        authSubscription = subscription
+      }
+    }
+
+    initialize()
+
+    // ✅ FIX 4: Proper cleanup
+    return () => {
+      console.log('🧹 useAuth cleanup')
+      mounted = false
+      if (authSubscription) {
+        authSubscription.unsubscribe()
+      }
+    }
+  }, []) // ✅ Empty dependency array - run ONCE
+
+  // ✅ FIX 5: Safety timeout - force loading to false after 5 seconds
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ Auth check timeout - forcing loading to false')
+        setLoading(false)
+      }
+    }, 5000)
+
+    return () => clearTimeout(timeout)
+  }, [loading])
 
   return {
     user,

@@ -28,7 +28,7 @@ export default function JoinRoomPage() {
     setJoining(true)
 
     try {
-      const response = await fetch('/api/rooms/join', {
+      const response = await fetch('/api/room/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

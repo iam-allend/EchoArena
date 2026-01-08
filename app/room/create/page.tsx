@@ -15,13 +15,21 @@ export default function CreateRoomPage() {
   const [maxStages, setMaxStages] = useState(10)
 
   async function handleCreateRoom() {
+    if (!user) {
+      alert('Please login first')
+      return
+    }
+
     setCreating(true)
 
     try {
-      const response = await fetch('/api/rooms/create', {
+      const response = await fetch('/api/room/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maxStages }),
+        body: JSON.stringify({ 
+          maxStages,
+          userId: user.id  // ← ADD THIS LINE (might be missing)
+        }),
       })
 
       const data = await response.json()

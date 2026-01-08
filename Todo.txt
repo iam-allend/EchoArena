@@ -3,18 +3,18 @@
 ## Week 1: Foundation (Jan 8-14)
 
 ### Day 1-2: Authentication
-- [ ] Register page UI
-- [ ] Login page UI
-- [ ] Supabase Auth integration
-- [ ] Protected routes middleware
-- [ ] User dashboard
+- [✅] Register page UI
+- [✅] Login page UI
+- [✅] Supabase Auth integration
+- [✅] Protected routes middleware
+- [✅] User dashboard
 
 ### Day 3-4: Room System
-- [ ] Create room API
-- [ ] Join room API
-- [ ] Room lobby UI
-- [ ] Participant list (real-time)
-- [ ] Room code generation
+- [✅] Create room API
+- [✅] Join room API
+- [✅] Room lobby UI
+- [✅] Participant list (real-time)
+- [✅] Room code generation
 
 ### Day 5-7: Game Mechanics
 - [ ] Stage system

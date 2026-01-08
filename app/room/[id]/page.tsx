@@ -48,10 +48,23 @@ export default function RoomLobbyPage() {
 
   const isHost = user?.id === room?.host_user_id
 
+  // ✅ DEBUG DI USEEFFECT (agar window tersedia)
   useEffect(() => {
-    if (!authLoading) {
+    console.log('🔍 DEBUG PAGE LOAD:')
+    console.log('- params object:', params)
+    console.log('- params.id:', params.id)
+    console.log('- roomId:', roomId)
+    console.log('- roomId type:', typeof roomId)
+    if (typeof window !== 'undefined') {
+      console.log('- URL pathname:', window.location.pathname)
+    }
+  }, [params, roomId])
+
+  useEffect(() => {
+    if (!authLoading && roomId) {
       loadRoomData()
-      subscribeToRoomUpdates()
+      const cleanup = subscribeToRoomUpdates()
+      return cleanup
     }
   }, [authLoading, roomId])
 
@@ -162,16 +175,85 @@ export default function RoomLobbyPage() {
 
   async function handleLeaveRoom() {
     try {
-      const response = await fetch(`/api/rooms/${roomId}/leave`, {
-        method: 'POST',
+      // ✅ VALIDASI 1: Cek user dan user.id
+      console.log('🔍 Checking user:', user)
+      console.log('🔍 User ID:', user?.id, typeof user?.id)
+      
+      if (!user) {
+        console.error('❌ User object is null/undefined')
+        alert('You must be logged in to leave the room')
+        return
+      }
+
+      if (!user.id) {
+        console.error('❌ User ID is missing from user object')
+        alert('User ID not found. Please log in again.')
+        router.push('/') // Redirect ke login
+        return
+      }
+
+      // ✅ VALIDASI 2: Cek roomId
+      console.log('🔍 Room ID:', roomId, typeof roomId)
+      
+      if (!roomId) {
+        console.error('❌ Room ID is missing')
+        alert('Invalid room ID')
+        return
+      }
+
+      // ✅ VALIDASI 3: Pastikan bukan string "undefined"
+      if (user.id === 'undefined' || roomId === 'undefined') {
+        console.error('❌ ID contains string "undefined"', { userId: user.id, roomId })
+        alert('Invalid user or room ID')
+        return
+      }
+
+      console.log('✅ All validations passed')
+      console.log('🚪 Attempting to leave room...', { 
+        userId: user.id, 
+        roomId,
+        userIdType: typeof user.id,
+        roomIdType: typeof roomId
       })
 
-      if (!response.ok) throw new Error('Failed to leave room')
+      // ✅ Kirim request
+      const response = await fetch(`/api/room/${roomId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId: user.id 
+        }),
+      })
 
+      // Parse response
+      const data = await response.json()
+      
+      console.log('📥 Leave room response:', {
+        status: response.status,
+        ok: response.ok,
+        data
+      })
+
+      // Check jika response tidak OK
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`)
+      }
+
+      console.log('✅ Successfully left room!')
+      
+      // Redirect ke dashboard
       router.push('/dashboard')
-    } catch (error) {
-      console.error('Leave room error:', error)
-      alert('Failed to leave room')
+      
+    } catch (error: any) {
+      console.error('❌ Leave room error:', error)
+      
+      // Tampilkan error detail ke user
+      alert(
+        error.message || 
+        'Failed to leave room. Please check console for details.'
+      )
     }
   }
 

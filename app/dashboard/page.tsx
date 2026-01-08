@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getGuestDaysRemaining } from '@/lib/auth/guest'
 import { Loader2, AlertTriangle, Crown, LogOut, Play, Clock, CheckCircle } from 'lucide-react'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+
+
 
 interface RoomHistory {
   id: string
@@ -18,6 +21,7 @@ interface RoomHistory {
   current_stage: number
   max_stages: number
   is_host: boolean
+  participant_status?: string
 }
 
 export default function Dashboard() {
@@ -48,6 +52,7 @@ export default function Dashboard() {
         .from('room_participants')
         .select(`
           room_id,
+          status,
           game_rooms (
             id,
             room_code,
@@ -75,11 +80,17 @@ export default function Dashboard() {
             current_stage: room.current_stage,
             max_stages: room.max_stages,
             is_host: room.host_user_id === user.id,
+            participant_status: p.status, // ✅ ADD THIS
           }
         })
 
-      // Split into active and past
-      setActiveRooms(rooms.filter(r => r.status === 'waiting' || r.status === 'playing'))
+      // ✅ FIX: Only show rooms where user is active OR room is finished
+      const activeRooms = rooms.filter(r => 
+        (r.status === 'waiting' || r.status === 'playing') && 
+        r.participant_status === 'active' // Only active participants
+      )
+      
+      setActiveRooms(activeRooms)
       setPastRooms(rooms.filter(r => r.status === 'finished'))
     } catch (error) {
       console.error('Load room history error:', error)
@@ -108,6 +119,7 @@ export default function Dashboard() {
   }
 
   return (
+      
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Guest Warning */}
@@ -270,5 +282,7 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+
+    
   )
 }
