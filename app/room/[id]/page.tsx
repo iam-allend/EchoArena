@@ -119,49 +119,72 @@ export default function RoomLobbyPage() {
   }
 
   function subscribeToRoomUpdates() {
-    // Subscribe to participants changes
-    const participantsChannel = supabase
-      .channel(`room_${roomId}_participants`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_participants',
-          filter: `room_id=eq.${roomId}`,
+    console.log('🔔 Setting up realtime subscriptions for room:', roomId)
+    
+    // ✅ FIX 1: Single channel for better performance
+    const channel = supabase
+      .channel(`room_${roomId}`, {
+        config: {
+          broadcast: { self: true },
         },
-        () => {
-          loadParticipants()
+      })
+      
+    // ✅ FIX 2: Subscribe to participants with better filter
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*', // INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'room_participants',
+        filter: `room_id=eq.${roomId}`, // This works for UUID
+      },
+      (payload) => {
+        console.log('🔔 Participant change detected:', payload.eventType, payload)
+        loadParticipants()
+      }
+    )
+    
+    // ✅ FIX 3: Subscribe to room status changes
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'game_rooms',
+        filter: `id=eq.${roomId}`,
+      },
+      (payload) => {
+        console.log('🔔 Room status change:', payload)
+        const updatedRoom = payload.new as Room
+        setRoom(updatedRoom)
+
+        // If game started, redirect
+        if (updatedRoom.status === 'playing') {
+          console.log('🎮 Game started! Redirecting...')
+          router.push(`/game/${roomId}`)
         }
-      )
-      .subscribe()
-
-    // Subscribe to room changes
-    const roomChannel = supabase
-      .channel(`room_${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_rooms',
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          const updatedRoom = payload.new as Room
-          setRoom(updatedRoom)
-
-          // If game started, redirect to game screen
-          if (updatedRoom.status === 'playing') {
-            router.push(`/game/${roomId}`)
-          }
+      }
+    )
+    
+    // ✅ FIX 4: Subscribe and track status
+    channel
+      .subscribe((status, err) => {
+        console.log('📡 Subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to room updates')
         }
-      )
-      .subscribe()
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel error:', err)
+        }
+        if (status === 'TIMED_OUT') {
+          console.error('⏱️ Subscription timed out')
+        }
+      })
 
+    // ✅ FIX 5: Cleanup function
     return () => {
-      supabase.removeChannel(participantsChannel)
-      supabase.removeChannel(roomChannel)
+      console.log('🧹 Cleaning up subscriptions for room:', roomId)
+      supabase.removeChannel(channel)
     }
   }
 
@@ -350,6 +373,7 @@ export default function RoomLobbyPage() {
                 </div>
               </div>
             </div>
+            
           </div>
         </Card>
 
