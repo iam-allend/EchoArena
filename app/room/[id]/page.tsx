@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Copy, Check, Users, Crown, LogOut, Play } from 'lucide-react'
+import { Loader2, Copy, Check, Users, Crown, LogOut } from 'lucide-react'
 
 interface Participant {
   id: string
@@ -47,18 +47,6 @@ export default function RoomLobbyPage() {
   const [starting, setStarting] = useState(false)
 
   const isHost = user?.id === room?.host_user_id
-
-  // ✅ DEBUG DI USEEFFECT (agar window tersedia)
-  useEffect(() => {
-    console.log('🔍 DEBUG PAGE LOAD:')
-    console.log('- params object:', params)
-    console.log('- params.id:', params.id)
-    console.log('- roomId:', roomId)
-    console.log('- roomId type:', typeof roomId)
-    if (typeof window !== 'undefined') {
-      console.log('- URL pathname:', window.location.pathname)
-    }
-  }, [params, roomId])
 
   useEffect(() => {
     if (!authLoading && roomId) {
@@ -107,7 +95,7 @@ export default function RoomLobbyPage() {
         )
       `)
       .eq('room_id', roomId)
-      .neq('status', 'left')
+      .eq('status', 'active') // ✅ HANYA ambil yang active
       .order('joined_at', { ascending: true })
 
     if (error) {
@@ -115,36 +103,17 @@ export default function RoomLobbyPage() {
       return
     }
 
+    console.log('👥 Participants loaded:', data?.length || 0)
     setParticipants(data || [])
   }
 
   function subscribeToRoomUpdates() {
     console.log('🔔 Setting up realtime subscriptions for room:', roomId)
     
-    // ✅ FIX 1: Single channel for better performance
-    const channel = supabase
-      .channel(`room_${roomId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
-      
-    // ✅ FIX 2: Subscribe to participants with better filter
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*', // INSERT, UPDATE, DELETE
-        schema: 'public',
-        table: 'room_participants',
-        filter: `room_id=eq.${roomId}`, // This works for UUID
-      },
-      (payload) => {
-        console.log('🔔 Participant change detected:', payload.eventType, payload)
-        loadParticipants()
-      }
-    )
+    // ✅ SINGLE CHANNEL untuk semua subscriptions
+    const channel = supabase.channel(`room_lobby:${roomId}`)
     
-    // ✅ FIX 3: Subscribe to room status changes
+    // ✅ Subscribe to ROOM updates (status changes)
     channel.on(
       'postgres_changes',
       {
@@ -154,36 +123,47 @@ export default function RoomLobbyPage() {
         filter: `id=eq.${roomId}`,
       },
       (payload) => {
-        console.log('🔔 Room status change:', payload)
+        console.log('🎮 Room updated:', payload.new)
         const updatedRoom = payload.new as Room
         setRoom(updatedRoom)
 
-        // If game started, redirect
+        // If game started, redirect to game page
         if (updatedRoom.status === 'playing') {
-          console.log('🎮 Game started! Redirecting...')
+          console.log('🚀 Game started! Redirecting to game page...')
           router.push(`/game/${roomId}`)
         }
       }
     )
     
-    // ✅ FIX 4: Subscribe and track status
-    channel
-      .subscribe((status, err) => {
-        console.log('📡 Subscription status:', status)
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to room updates')
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Channel error:', err)
-        }
-        if (status === 'TIMED_OUT') {
-          console.error('⏱️ Subscription timed out')
-        }
-      })
+    // ✅ Subscribe to PARTICIPANT changes (join/leave/rejoin)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*', // INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'room_participants',
+        filter: `room_id=eq.${roomId}`,
+      },
+      (payload) => {
+        console.log('👥 Participant change detected:', payload.eventType)
+        // Reload participant list whenever there's a change
+        loadParticipants()
+      }
+    )
 
-    // ✅ FIX 5: Cleanup function
+    // ✅ Subscribe and log status
+    channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Successfully subscribed to room updates')
+      }
+      if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Channel error:', err)
+      }
+    })
+
+    // ✅ Cleanup function
     return () => {
-      console.log('🧹 Cleaning up subscriptions for room:', roomId)
+      console.log('🧹 Cleaning up room subscriptions')
       supabase.removeChannel(channel)
     }
   }
@@ -198,48 +178,13 @@ export default function RoomLobbyPage() {
 
   async function handleLeaveRoom() {
     try {
-      // ✅ VALIDASI 1: Cek user dan user.id
-      console.log('🔍 Checking user:', user)
-      console.log('🔍 User ID:', user?.id, typeof user?.id)
-      
-      if (!user) {
-        console.error('❌ User object is null/undefined')
-        alert('You must be logged in to leave the room')
+      if (!user?.id || !roomId) {
+        alert('Invalid user or room')
         return
       }
 
-      if (!user.id) {
-        console.error('❌ User ID is missing from user object')
-        alert('User ID not found. Please log in again.')
-        router.push('/') // Redirect ke login
-        return
-      }
+      console.log('🚪 Leaving room...', { userId: user.id, roomId })
 
-      // ✅ VALIDASI 2: Cek roomId
-      console.log('🔍 Room ID:', roomId, typeof roomId)
-      
-      if (!roomId) {
-        console.error('❌ Room ID is missing')
-        alert('Invalid room ID')
-        return
-      }
-
-      // ✅ VALIDASI 3: Pastikan bukan string "undefined"
-      if (user.id === 'undefined' || roomId === 'undefined') {
-        console.error('❌ ID contains string "undefined"', { userId: user.id, roomId })
-        alert('Invalid user or room ID')
-        return
-      }
-
-      console.log('✅ All validations passed')
-      console.log('🚪 Attempting to leave room...', { 
-        userId: user.id, 
-        roomId,
-        userIdType: typeof user.id,
-        roomIdType: typeof roomId
-      })
-
-      // ✅ Kirim request
       const response = await fetch(`/api/room/${roomId}/leave`, {
         method: 'POST',
         headers: {
@@ -250,40 +195,27 @@ export default function RoomLobbyPage() {
         }),
       })
 
-      // Parse response
       const data = await response.json()
-      
-      console.log('📥 Leave room response:', {
-        status: response.status,
-        ok: response.ok,
-        data
-      })
 
-      // Check jika response tidak OK
       if (!response.ok) {
-        throw new Error(data.error || `Server error: ${response.status}`)
+        throw new Error(data.error || 'Failed to leave room')
       }
 
-      console.log('✅ Successfully left room!')
-      
-      // Redirect ke dashboard
+      console.log('✅ Left room successfully')
       router.push('/dashboard')
       
     } catch (error: any) {
       console.error('❌ Leave room error:', error)
-      
-      // Tampilkan error detail ke user
-      alert(
-        error.message || 
-        'Failed to leave room. Please check console for details.'
-      )
+      alert(error.message || 'Failed to leave room')
     }
   }
 
   async function handleStartGame() {
-    if (!isHost) return
+    if (!isHost) {
+      alert('Only the host can start the game')
+      return
+    }
 
-    // Check minimum players
     if (participants.length < 2) {
       alert('Need at least 2 players to start!')
       return
@@ -292,17 +224,48 @@ export default function RoomLobbyPage() {
     setStarting(true)
 
     try {
-      const { error } = await supabase
+      console.log('🎮 Starting game...')
+
+      // Update room status to playing
+      const { error: updateError } = await supabase
         .from('game_rooms')
-        .update({ status: 'playing', current_stage: 1 })
+        .update({ 
+          status: 'playing',
+          current_stage: 1 
+        })
         .eq('id', roomId)
 
-      if (error) throw error
+      if (updateError) throw updateError
 
-      // Will redirect via subscription
-    } catch (error) {
-      console.error('Start game error:', error)
-      alert('Failed to start game')
+      // Initialize turn queue for stage 1
+      console.log('🎲 Initializing turn queue...')
+      
+      const { data: initData, error: turnError } = await supabase.rpc('initialize_stage_turns', {
+        p_room_id: roomId,
+        p_stage_number: 1
+      })
+
+      if (turnError) {
+        console.error('❌ Failed to initialize turns:', {
+          error: turnError,
+          message: turnError.message,
+          details: turnError.details,
+          hint: turnError.hint,
+          code: turnError.code
+        })
+        throw new Error(turnError.message || 'Failed to initialize turn queue')
+      }
+
+      console.log('✅ Turn queue initialized:', initData)
+
+      console.log('✅ Game started! Redirecting...')
+
+      // Redirect to game page
+      router.push(`/game/${roomId}`)
+      
+    } catch (error: any) {
+      console.error('❌ Start game error:', error)
+      alert(`Failed to start game: ${error.message}`)
       setStarting(false)
     }
   }
@@ -373,7 +336,6 @@ export default function RoomLobbyPage() {
                 </div>
               </div>
             </div>
-            
           </div>
         </Card>
 
@@ -452,21 +414,22 @@ export default function RoomLobbyPage() {
         </Card>
 
         {/* Start Game Button (Host Only) */}
-        {isHost && (
+        {isHost && room.status === 'waiting' && (
           <Button
             onClick={handleStartGame}
-            disabled={participants.length < 2 || starting}
-            className="w-full h-16 text-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+            disabled={starting || participants.length < 2}
+            size="lg"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
           >
             {starting ? (
               <>
-                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Starting Game...
               </>
             ) : (
               <>
-                <Play className="mr-2 h-6 w-6" />
-                Start Game
+                🎮 Start Game
+                {participants.length < 2 && ' (Need 2+ players)'}
               </>
             )}
           </Button>
