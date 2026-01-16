@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useGameBroadcast, GameEvent } from '@/hooks/useGameBroadcast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -20,7 +21,7 @@ interface Question {
   option_b: string
   option_c: string
   option_d: string
-  correct_answer: string
+  correct_answer?: string
   difficulty: string
 }
 
@@ -39,6 +40,87 @@ export default function GamePage() {
   const [answerResult, setAnswerResult] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const hasAnswered = useRef(false)
+
+  // ✅ Handle broadcast events
+  const handleGameEvent = useCallback(async (event: GameEvent) => {
+    console.log('🎯 Event received:', event.type)
+
+    switch (event.type) {
+      case 'QUESTION_LOADED':
+        console.log('📖 Question loaded event')
+        setCurrentQuestion(event.question)
+        hasAnswered.current = false
+        
+        // Check if it's my turn
+        const stateResp = await fetch(`/api/game/${roomId}/state`)
+        const stateData = await stateResp.json()
+        
+        if (stateData.success) {
+          setGameState(stateData.game)
+          const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
+          
+          if (isMyTurn) {
+            console.log('✅ My turn - start reading')
+            setPhase('reading')
+          } else {
+            console.log('👀 Spectating')
+            setPhase('waiting')
+          }
+        }
+        break
+
+      case 'ANSWER_SUBMITTED':
+        console.log('✍️ Answer submitted by:', event.userId)
+        
+        // Refresh game state
+        const answerResp = await fetch(`/api/game/${roomId}/state`)
+        const answerData = await answerResp.json()
+        
+        if (answerData.success) {
+          setGameState(answerData.game)
+          
+          // Check if it's now my turn
+          const nowMyTurn = answerData.game.currentTurn?.user_id === user?.id
+          
+          if (nowMyTurn && !hasAnswered.current) {
+            console.log('🎯 Now my turn!')
+            // Question akan di-load oleh turn user via loadQuestion()
+            setPhase('waiting')
+            setCurrentQuestion(null)
+            
+            // Load question untuk giliran saya
+            await loadQuestion()
+          }
+        }
+        break
+
+      case 'STAGE_COMPLETE':
+        console.log('📈 Stage complete, moving to:', event.nextStage)
+        hasAnswered.current = false
+        setPhase('waiting')
+        setCurrentQuestion(null)
+        setAnswerResult(null)
+        
+        // Refresh state
+        await refreshGameState()
+        break
+
+      case 'GAME_FINISHED':
+        console.log('🏁 Game finished')
+        setPhase('finished')
+        break
+    }
+  }, [roomId, user?.id])
+
+  // ✅ Setup broadcast
+  const { broadcast } = useGameBroadcast({
+    roomId,
+    onEvent: handleGameEvent,
+    enabled: !authLoading && !!user,
+  })
+
+  // Initialize game
   useEffect(() => {
     if (!authLoading && user && roomId) {
       initializeGame()
@@ -49,115 +131,178 @@ export default function GamePage() {
     try {
       console.log('🎮 Initializing game...')
 
-      // Get game state
       const response = await fetch(`/api/game/${roomId}/state`)
       const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.error)
-      }
+      if (!data.success) throw new Error(data.error)
+
+      console.log('✅ Game state loaded')
 
       setGameState(data.game)
       setLoading(false)
 
-      // Check if it's my turn
-      if (data.game.currentTurn?.user_id === user?.id) {
+      const isMyTurn = data.game.currentTurn?.user_id === user?.id
+      
+      if (isMyTurn) {
+        console.log('🎯 My turn! Loading question...')
+        hasAnswered.current = false
         await loadQuestion()
+      } else {
+        console.log('👀 Not my turn, checking for active question...')
+        await loadCurrentQuestion()
+      }
+    } catch (error: any) {
+      console.error('❌ Initialize error:', error)
+      alert(`Failed: ${error.message}`)
+      router.push('/dashboard')
+    }
+  }
+
+  async function loadCurrentQuestion() {
+    try {
+      const { data } = await supabase
+        .from('active_questions')
+        .select('*')
+        .eq('room_id', roomId)
+        .maybeSingle()
+
+      if (data) {
+        console.log('✅ Found active question:', data.question_id)
+        setCurrentQuestion({
+          id: data.question_id,
+          question_text: data.question_text,
+          option_a: data.option_a,
+          option_b: data.option_b,
+          option_c: data.option_c,
+          option_d: data.option_d,
+          difficulty: data.difficulty,
+        })
+        setPhase('waiting')
       } else {
         setPhase('waiting')
       }
-
-      // Subscribe to game updates
-      subscribeToGameUpdates()
-    } catch (error: any) {
-      console.error('❌ Initialize game error:', error)
-      alert(`Failed to load game: ${error.message}`)
-      router.push('/dashboard')
+    } catch (error) {
+      console.error('Load current question error:', error)
+      setPhase('waiting')
     }
   }
 
   async function loadQuestion() {
     try {
-      console.log('❓ Loading question...')
+      console.log('❓ Loading NEW question...')
       
       const response = await fetch(`/api/game/${roomId}/question`)
       const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.error)
-      }
+      if (!data.success) throw new Error(data.error)
 
-      setCurrentQuestion(data.question)
-      setPhase('reading')
+      console.log('✅ Question API called (will broadcast)')
       
-      console.log('✅ Question loaded:', data.question.id)
+      // Question akan di-broadcast dan diterima via handleGameEvent
+      // Tidak perlu set state di sini
     } catch (error: any) {
       console.error('❌ Load question error:', error)
       alert('Failed to load question')
     }
   }
 
-  function subscribeToGameUpdates() {
-    console.log('🔔 Setting up real-time subscriptions...')
+  async function refreshGameState() {
+    try {
+      const response = await fetch(`/api/game/${roomId}/state`)
+      const data = await response.json()
 
-    // Subscribe to room updates
-    const roomChannel = supabase
-      .channel(`game_room:${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_rooms',
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          console.log('🎮 Room updated:', payload.new)
-          handleRoomUpdate(payload.new)
+      if (data.success) {
+        setGameState(data.game)
+      }
+    } catch (error) {
+      console.error('Refresh error:', error)
+    }
+  }
+
+  function handleReadingComplete() {
+    console.log('📖 Reading done')
+    setPhase('answering')
+  }
+
+  async function handleAnswer(selectedAnswer: 'A' | 'B' | 'C' | 'D') {
+    if (isSubmitting || !currentQuestion || !gameState || hasAnswered.current) {
+      console.log('⚠️ Cannot answer')
+      return
+    }
+
+    hasAnswered.current = true
+    setIsSubmitting(true)
+
+    try {
+      console.log('✍️ Submitting:', selectedAnswer)
+
+      const response = await fetch(`/api/game/${roomId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          stageNumber: gameState.room.current_stage,
+          questionId: currentQuestion.id,
+          selectedAnswer,
+          timeTaken: 10,
+          voiceTranscript: null,
+        }),
+      })
+
+      const data = await response.json()
+      if (!data.success) throw new Error(data.error)
+
+      console.log('✅ Answer submitted')
+
+      setAnswerResult({
+        selectedAnswer,
+        correctAnswer: data.result.correct_answer,
+        isCorrect: data.result.is_correct,
+        pointsEarned: data.result.points_earned,
+        livesRemaining: data.result.lives_remaining,
+      })
+      setPhase('result')
+
+      // Wait then check stage complete
+      setTimeout(async () => {
+        if (data.stageComplete) {
+          await handleStageComplete()
+        } else {
+          console.log('⏳ Waiting for next turn')
+          setPhase('waiting')
+          setAnswerResult(null)
+          // Next turn akan trigger broadcast
         }
-      )
-      .subscribe()
+      }, 3000)
+    } catch (error: any) {
+      console.error('❌ Submit error:', error)
+      hasAnswered.current = false
+      alert(`Failed: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
-    // Subscribe to turn queue updates
-    const turnChannel = supabase
-      .channel(`turn_queue:${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'turn_queue',
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => {
-          console.log('🔄 Turn updated, reloading state...')
-          reloadGameState()
-        }
-      )
-      .subscribe()
+  function handleAnsweringTimeout() {
+    console.log('⏰ Timeout - auto answer A')
+    handleAnswer('A')
+  }
 
-    // Subscribe to participant updates (score, lives)
-    const participantChannel = supabase
-      .channel(`participants:${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'room_participants',
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => {
-          console.log('👥 Participants updated, reloading state...')
-          reloadGameState()
-        }
-      )
-      .subscribe()
+  async function handleStageComplete() {
+    console.log('🏁 Stage complete')
+    
+    try {
+      const response = await fetch(`/api/game/${roomId}/next-stage`, {
+        method: 'POST',
+      })
 
-    return () => {
-      supabase.removeChannel(roomChannel)
-      supabase.removeChannel(turnChannel)
-      supabase.removeChannel(participantChannel)
+      const data = await response.json()
+      if (!data.success) throw new Error(data.error)
+
+      // Event STAGE_COMPLETE atau GAME_FINISHED akan di-broadcast
+      // dan ditangani oleh handleGameEvent
+    } catch (error: any) {
+      console.error('❌ Next stage error:', error)
     }
   }
 
@@ -169,116 +314,20 @@ export default function GamePage() {
       if (data.success) {
         setGameState(data.game)
 
-        // Check if it's now my turn
-        if (data.game.currentTurn?.user_id === user?.id && phase === 'waiting') {
-          await loadQuestion()
-        } else if (!data.game.currentTurn || data.game.currentTurn?.user_id !== user?.id) {
+        if (data.game.currentTurn?.user_id === user?.id) {
+          if (!currentQuestion && phase === 'waiting' && !hasAnswered.current) {
+            await loadQuestion()
+          }
+        } else {
           setPhase('waiting')
-          setCurrentQuestion(null)
-          setAnswerResult(null)
         }
       }
     } catch (error) {
-      console.error('Failed to reload game state:', error)
+      console.error('Failed reload:', error)
     }
   }
 
-  function handleRoomUpdate(room: any) {
-    if (room.status === 'finished') {
-      setPhase('finished')
-    }
-  }
-
-  function handleReadingComplete() {
-    console.log('📖 Reading time complete, starting answer timer...')
-    setPhase('answering')
-  }
-
-  async function handleAnswer(selectedAnswer: 'A' | 'B' | 'C' | 'D') {
-    if (isSubmitting || !currentQuestion || !gameState) return
-
-    setIsSubmitting(true)
-
-    try {
-      console.log('✍️ Submitting answer:', selectedAnswer)
-
-      const response = await fetch(`/api/game/${roomId}/answer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          stageNumber: gameState.room.current_stage,
-          questionId: currentQuestion.id,
-          selectedAnswer,
-          timeTaken: 10, // TODO: Calculate actual time
-          voiceTranscript: null,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error)
-      }
-
-      console.log('✅ Answer result:', data.result)
-
-      // Show result
-      setAnswerResult({
-        selectedAnswer,
-        correctAnswer: data.result.correct_answer,
-        isCorrect: data.result.is_correct,
-        pointsEarned: data.result.points_earned,
-        livesRemaining: data.result.lives_remaining,
-      })
-      setPhase('result')
-
-      // Wait 3 seconds then check stage status
-      setTimeout(async () => {
-        if (data.stageComplete) {
-          await handleStageComplete()
-        } else {
-          setPhase('waiting')
-          setCurrentQuestion(null)
-          setAnswerResult(null)
-        }
-      }, 3000)
-    } catch (error: any) {
-      console.error('❌ Submit answer error:', error)
-      alert(`Failed to submit answer: ${error.message}`)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  function handleAnsweringTimeout() {
-    console.log('⏰ Time out! Auto-submitting wrong answer...')
-    // Auto-submit wrong answer (assume A)
-    handleAnswer('A')
-  }
-
-  async function handleStageComplete() {
-    console.log('🏁 Stage complete!')
-    
-    try {
-      const response = await fetch(`/api/game/${roomId}/next-stage`, {
-        method: 'POST',
-      })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error)
-      }
-
-      if (data.gameFinished) {
-        setPhase('finished')
-      }
-      // Game will continue via real-time updates
-    } catch (error: any) {
-      console.error('❌ Next stage error:', error)
-    }
-  }
+  // ===== RENDER =====
 
   if (authLoading || loading) {
     return (
@@ -295,19 +344,9 @@ export default function GamePage() {
     return null
   }
 
-  // ✅ DEBUG: Log game state
-  console.log('🎮 Game State:', {
-    currentTurn: gameState.currentTurn,
-    roomStatus: gameState.room?.status,
-    currentStage: gameState.room?.current_stage,
-    myUserId: user.id,
-    phase,
-  })
-
   const isMyTurn = gameState.currentTurn?.user_id === user.id
-  const myData = gameState.participants.find((p: any) => p.user_id === user.id)
 
-  // Game finished screen
+  // ===== FINISHED STATE =====
   if (phase === 'finished') {
     const winner = gameState.participants
       .filter((p: any) => p.status === 'active')
@@ -349,11 +388,12 @@ export default function GamePage() {
     )
   }
 
+  // ===== MAIN GAME UI =====
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left sidebar - Game info */}
+          {/* LEFT SIDE - Game Info */}
           <div className="lg:col-span-1">
             <GameHeader
               roomCode={gameState.room.room_code}
@@ -366,38 +406,39 @@ export default function GamePage() {
             />
           </div>
 
-          {/* Main content - Question */}
+          {/* RIGHT SIDE - Question Area */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Timer */}
-            {isMyTurn && currentQuestion && phase !== 'result' && (
+            {/* Timer - Only show untuk user yang giliran menjawab */}
+            {isMyTurn && currentQuestion && phase !== 'result' && !hasAnswered.current && (
               <Timer
+                key={`${currentQuestion.id}-${phase}`}
                 duration={phase === 'reading' ? 5 : 10}
                 onComplete={phase === 'reading' ? handleReadingComplete : handleAnsweringTimeout}
                 label={phase === 'reading' ? 'Reading Time' : 'Answer Time'}
               />
             )}
 
-            {/* Question or Waiting */}
+            {/* Question Display */}
             {currentQuestion ? (
               <QuestionDisplay
                 question={currentQuestion}
                 onAnswer={handleAnswer}
-                isMyTurn={isMyTurn}
+                isMyTurn={isMyTurn && !hasAnswered.current}
                 showResult={phase === 'result' ? answerResult : undefined}
-                disabled={phase === 'reading' || isSubmitting}
+                disabled={phase === 'reading' || isSubmitting || !isMyTurn || hasAnswered.current}
               />
             ) : (
               <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-12 text-center">
                 <Loader2 className="h-12 w-12 animate-spin text-white mx-auto mb-4" />
                 <p className="text-white text-xl">
                   {phase === 'waiting' 
-                    ? '⏳ Waiting for other players...' 
-                    : 'Loading question...'}
+                    ? '⏳ Waiting for next question...' 
+                    : 'Loading...'}
                 </p>
               </Card>
             )}
 
-            {/* Result Display */}
+            {/* Result Card */}
             {phase === 'result' && answerResult && (
               <Card className={`p-6 border-2 ${
                 answerResult.isCorrect 
@@ -414,7 +455,7 @@ export default function GamePage() {
                     </p>
                   ) : (
                     <p className="text-white text-xl">
-                      Lives remaining: {answerResult.livesRemaining}/3
+                      Lives: {answerResult.livesRemaining}/3
                     </p>
                   )}
                 </div>
@@ -423,27 +464,23 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ✅ DEBUG PANEL - Hapus setelah fix */}
-        <Card className="mt-6 bg-black/40 backdrop-blur-sm border-yellow-400/50 p-4">
-          <h3 className="text-yellow-400 font-bold mb-2">🐛 DEBUG INFO</h3>
+        {/* Debug Card */}
+        <Card className="mt-6 bg-black/40 p-4">
+          <h3 className="text-yellow-400 font-bold mb-2">DEBUG INFO</h3>
           <div className="text-white text-sm space-y-1 font-mono">
-            <p>Room ID: {roomId}</p>
-            <p>Room Status: {gameState.room?.status}</p>
-            <p>Current Stage: {gameState.room?.current_stage}/{gameState.room?.max_stages}</p>
-            <p>Phase: {phase}</p>
-            <p>My User ID: {user.id}</p>
-            <p>Current Turn User ID: {gameState.currentTurn?.user_id || 'NULL'}</p>
-            <p>Current Turn Username: {gameState.currentTurn?.username || 'NULL'}</p>
-            <p>Is My Turn: {isMyTurn ? 'YES' : 'NO'}</p>
-            <p>Has Question: {currentQuestion ? 'YES' : 'NO'}</p>
-            <p>Participants: {gameState.participants?.length || 0}</p>
+            <p>Phase: <span className="text-cyan-400">{phase}</span></p>
+            <p>Turn: <span className="text-cyan-400">{gameState.currentTurn?.username || 'NULL'}</span></p>
+            <p>My Turn: <span className="text-cyan-400">{isMyTurn ? 'YES' : 'NO'}</span></p>
+            <p>Question ID: <span className="text-cyan-400">{currentQuestion?.id || 'NULL'}</span></p>
+            <p>Has Answered: <span className="text-cyan-400">{hasAnswered.current ? 'YES' : 'NO'}</span></p>
+            <p>Stage: <span className="text-cyan-400">{gameState.room.current_stage}/{gameState.room.max_stages}</span></p>
           </div>
           <Button 
             onClick={() => reloadGameState()} 
             className="mt-3 w-full bg-yellow-500 hover:bg-yellow-600"
             size="sm"
           >
-            🔄 Reload Game State
+            🔄 Force Reload State
           </Button>
         </Card>
       </div>

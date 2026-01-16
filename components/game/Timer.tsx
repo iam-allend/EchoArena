@@ -24,7 +24,6 @@ export function Timer({ duration, onComplete, isPaused = false, label }: TimerPr
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          onComplete()
           return 0
         }
         return prev - 1
@@ -32,7 +31,14 @@ export function Timer({ duration, onComplete, isPaused = false, label }: TimerPr
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isPaused, onComplete])
+  }, [isPaused])
+
+  // ✅ FIX: Call onComplete in separate useEffect
+  useEffect(() => {
+    if (timeLeft === 0 && !isPaused) {
+      onComplete()
+    }
+  }, [timeLeft, isPaused, onComplete])
 
   const percentage = (timeLeft / duration) * 100
   const isLow = percentage < 30
