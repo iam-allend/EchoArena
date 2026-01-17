@@ -7,12 +7,12 @@ import { useGameBroadcast, GameEvent } from '@/hooks/useGameBroadcast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Loader2, Home } from 'lucide-react'
+import { Loader2, Home, Trophy } from 'lucide-react'
 import { Timer } from '@/components/game/Timer'
 import { QuestionDisplay } from '@/components/game/QuestionDisplay'
 import { GameHeader } from '@/components/game/GameHeader'
 
-type GamePhase = 'loading' | 'reading' | 'answering' | 'result' | 'waiting' | 'finished'
+type GamePhase = 'loading' | 'reading' | 'answering' | 'result' | 'waiting' | 'stage_transition' | 'finished'
 
 interface Question {
   id: number
@@ -39,6 +39,7 @@ export default function GamePage() {
   const [phase, setPhase] = useState<GamePhase>('loading')
   const [answerResult, setAnswerResult] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [nextStageNumber, setNextStageNumber] = useState<number | null>(null)
 
   const hasAnswered = useRef(false)
 
@@ -85,25 +86,53 @@ export default function GamePage() {
           
           if (nowMyTurn && !hasAnswered.current) {
             console.log('🎯 Now my turn!')
-            // Question akan di-load oleh turn user via loadQuestion()
             setPhase('waiting')
             setCurrentQuestion(null)
             
-            // Load question untuk giliran saya
-            await loadQuestion()
+            // Small delay then load question
+            setTimeout(() => {
+              loadQuestion()
+            }, 500)
           }
         }
         break
 
       case 'STAGE_COMPLETE':
         console.log('📈 Stage complete, moving to:', event.nextStage)
-        hasAnswered.current = false
-        setPhase('waiting')
+        
+        // ✅ Show transition screen
+        setNextStageNumber(event.nextStage)
+        setPhase('stage_transition')
         setCurrentQuestion(null)
         setAnswerResult(null)
+        hasAnswered.current = false
         
-        // Refresh state
-        await refreshGameState()
+        // ✅ Auto-dismiss after 3 seconds and load question
+        setTimeout(async () => {
+          await refreshGameState()
+          
+          // Fetch latest turn
+          const stateResp = await fetch(`/api/game/${roomId}/state`)
+          const stateData = await stateResp.json()
+          
+          if (stateData.success) {
+            setGameState(stateData.game)
+            const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
+            
+            if (isMyTurn) {
+              console.log('🎯 My turn in new stage - loading question')
+              setPhase('waiting')
+              
+              // Load question
+              setTimeout(() => {
+                loadQuestion()
+              }, 500)
+            } else {
+              console.log('👀 Not my turn - waiting for question')
+              setPhase('waiting')
+            }
+          }
+        }, 3000)
         break
 
       case 'GAME_FINISHED':
@@ -199,7 +228,6 @@ export default function GamePage() {
       console.log('✅ Question API called (will broadcast)')
       
       // Question akan di-broadcast dan diterima via handleGameEvent
-      // Tidak perlu set state di sini
     } catch (error: any) {
       console.error('❌ Load question error:', error)
       alert('Failed to load question')
@@ -271,7 +299,6 @@ export default function GamePage() {
           console.log('⏳ Waiting for next turn')
           setPhase('waiting')
           setAnswerResult(null)
-          // Next turn akan trigger broadcast
         }
       }, 3000)
     } catch (error: any) {
@@ -300,7 +327,6 @@ export default function GamePage() {
       if (!data.success) throw new Error(data.error)
 
       // Event STAGE_COMPLETE atau GAME_FINISHED akan di-broadcast
-      // dan ditangani oleh handleGameEvent
     } catch (error: any) {
       console.error('❌ Next stage error:', error)
     }
@@ -345,6 +371,42 @@ export default function GamePage() {
   }
 
   const isMyTurn = gameState.currentTurn?.user_id === user.id
+
+  // ===== STAGE TRANSITION SCREEN =====
+  if (phase === 'stage_transition') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900">
+        <Card className="bg-white/10 backdrop-blur-lg border-white/20 p-12 text-center max-w-2xl mx-4 animate-pulse">
+          <div className="mb-6">
+            <Trophy className="h-20 w-20 text-yellow-400 mx-auto mb-4 animate-bounce" />
+          </div>
+          <h1 className="text-5xl font-bold text-white mb-4">
+            Stage {gameState.room.current_stage} Complete!
+          </h1>
+          <p className="text-2xl text-purple-200 mb-8">
+            Moving to Stage {nextStageNumber}...
+          </p>
+          
+          {/* Leaderboard */}
+          <div className="space-y-2 mb-6">
+            {gameState.participants
+              .sort((a: any, b: any) => b.total_score - a.total_score)
+              .slice(0, 3)
+              .map((p: any, i: number) => (
+                <div key={p.user_id} className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                  <span className="text-white font-bold">
+                    {i === 0 && '🥇'} {i === 1 && '🥈'} {i === 2 && '🥉'} {p.user.username}
+                  </span>
+                  <span className="text-yellow-400 font-bold">{p.total_score} pts</span>
+                </div>
+              ))}
+          </div>
+
+          <Loader2 className="h-8 w-8 animate-spin text-white mx-auto" />
+        </Card>
+      </div>
+    )
+  }
 
   // ===== FINISHED STATE =====
   if (phase === 'finished') {
@@ -393,7 +455,6 @@ export default function GamePage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT SIDE - Game Info */}
           <div className="lg:col-span-1">
             <GameHeader
               roomCode={gameState.room.room_code}
@@ -406,9 +467,7 @@ export default function GamePage() {
             />
           </div>
 
-          {/* RIGHT SIDE - Question Area */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Timer - Only show untuk user yang giliran menjawab */}
             {isMyTurn && currentQuestion && phase !== 'result' && !hasAnswered.current && (
               <Timer
                 key={`${currentQuestion.id}-${phase}`}
@@ -418,7 +477,6 @@ export default function GamePage() {
               />
             )}
 
-            {/* Question Display */}
             {currentQuestion ? (
               <QuestionDisplay
                 question={currentQuestion}
@@ -438,7 +496,6 @@ export default function GamePage() {
               </Card>
             )}
 
-            {/* Result Card */}
             {phase === 'result' && answerResult && (
               <Card className={`p-6 border-2 ${
                 answerResult.isCorrect 
