@@ -410,41 +410,168 @@ export default function GamePage() {
 
   // ===== FINISHED STATE =====
   if (phase === 'finished') {
-    const winner = gameState.participants
+    const sortedParticipants = gameState.participants
       .filter((p: any) => p.status === 'active')
-      .sort((a: any, b: any) => b.total_score - a.total_score)[0]
+      .sort((a: any, b: any) => b.total_score - a.total_score)
+
+    const winner = sortedParticipants[0]
+    const myRank = sortedParticipants.findIndex((p: any) => p.user_id === user.id) + 1
+    const isWinner = winner?.user_id === user.id
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 p-8">
-        <div className="max-w-4xl mx-auto">
-          <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-8 text-center">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              🎉 Game Over!
-            </h1>
-            <p className="text-2xl text-purple-200 mb-8">
-              Winner: {winner?.user.username} with {winner?.total_score} points!
-            </p>
-
-            <div className="space-y-3 mb-8">
-              {gameState.participants
-                .sort((a: any, b: any) => b.total_score - a.total_score)
-                .map((p: any, i: number) => (
-                  <div key={p.user_id} className="flex items-center justify-between bg-white/5 p-4 rounded-lg">
-                    <span className="text-white font-bold">#{i + 1} {p.user.username}</span>
-                    <span className="text-white font-bold">{p.total_score} points</span>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 p-8 flex items-center justify-center">
+        <div className="max-w-4xl w-full">
+          {/* Personal Result Card */}
+          <Card className={`backdrop-blur-sm border-2 p-8 text-center mb-6 ${
+            isWinner 
+              ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-400' 
+              : 'bg-white/10 border-white/20'
+          }`}>
+            {isWinner ? (
+              <>
+                <div className="mb-6">
+                  <div className="text-8xl mb-4 animate-bounce">🏆</div>
+                  <h1 className="text-6xl font-bold text-yellow-400 mb-2">
+                    YOU WIN!
+                  </h1>
+                  <p className="text-3xl text-white font-bold">
+                    Congratulations, {winner.user.username}!
+                  </p>
+                </div>
+                <div className="flex justify-center gap-8 mb-4">
+                  <div className="bg-white/10 rounded-lg p-4 min-w-[120px]">
+                    <p className="text-purple-200 text-sm">Total Score</p>
+                    <p className="text-4xl font-bold text-yellow-400">{winner.total_score}</p>
                   </div>
-                ))}
-            </div>
+                  <div className="bg-white/10 rounded-lg p-4 min-w-[120px]">
+                    <p className="text-purple-200 text-sm">Rank</p>
+                    <p className="text-4xl font-bold text-yellow-400">#1</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <div className="text-6xl mb-4">
+                    {myRank === 2 && '🥈'}
+                    {myRank === 3 && '🥉'}
+                    {myRank > 3 && '🎮'}
+                  </div>
+                  <h1 className="text-5xl font-bold text-white mb-2">
+                    Game Over!
+                  </h1>
+                  <p className="text-2xl text-purple-200">
+                    You finished in{' '}
+                    <span className="font-bold text-yellow-400">
+                      {myRank === 1 && '1st'}
+                      {myRank === 2 && '2nd'}
+                      {myRank === 3 && '3rd'}
+                      {myRank > 3 && `${myRank}th`}
+                    </span>{' '}
+                    place!
+                  </p>
+                </div>
+                <div className="flex justify-center gap-8 mb-4">
+                  <div className="bg-white/10 rounded-lg p-4 min-w-[120px]">
+                    <p className="text-purple-200 text-sm">Your Score</p>
+                    <p className="text-4xl font-bold text-white">
+                      {sortedParticipants.find((p: any) => p.user_id === user.id)?.total_score || 0}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4 min-w-[120px]">
+                    <p className="text-purple-200 text-sm">Rank</p>
+                    <p className="text-4xl font-bold text-white">#{myRank}</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
 
+          {/* Winner Announcement (if not winner) */}
+          {!isWinner && (
+            <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border-2 border-yellow-400 p-6 text-center mb-6">
+              <div className="flex items-center justify-center gap-4">
+                <div className="text-5xl">👑</div>
+                <div className="text-left">
+                  <p className="text-yellow-400 text-sm font-semibold">WINNER</p>
+                  <p className="text-3xl font-bold text-white">{winner.user.username}</p>
+                  <p className="text-yellow-400 font-bold">{winner.total_score} points</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Full Leaderboard */}
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-6">
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">
+              🏅 Final Leaderboard
+            </h2>
+            <div className="space-y-3">
+              {sortedParticipants.map((p: any, i: number) => {
+                const isMe = p.user_id === user.id
+                const rank = i + 1
+                
+                return (
+                  <div 
+                    key={p.user_id} 
+                    className={`flex items-center justify-between p-4 rounded-lg transition-all ${
+                      isMe 
+                        ? 'bg-blue-500/30 border-2 border-blue-400 scale-105' 
+                        : 'bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-3xl min-w-[50px] text-center">
+                        {rank === 1 && '🥇'}
+                        {rank === 2 && '🥈'}
+                        {rank === 3 && '🥉'}
+                        {rank > 3 && `#${rank}`}
+                      </div>
+                      <div>
+                        <p className={`font-bold ${isMe ? 'text-blue-300' : 'text-white'}`}>
+                          {p.user.username} {isMe && '(You)'}
+                        </p>
+                        <p className="text-sm text-purple-200">
+                          Level {p.user.level}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-bold ${
+                        rank === 1 ? 'text-yellow-400' : 
+                        rank === 2 ? 'text-gray-300' : 
+                        rank === 3 ? 'text-orange-400' : 
+                        'text-white'
+                      }`}>
+                        {p.total_score}
+                      </p>
+                      <p className="text-sm text-purple-200">points</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 mt-6">
             <Button
               size="lg"
               onClick={() => router.push('/dashboard')}
-              className="bg-gradient-to-r from-green-500 to-emerald-600"
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
             >
               <Home className="mr-2 h-5 w-5" />
               Back to Dashboard
             </Button>
-          </Card>
+            <Button
+              size="lg"
+              onClick={() => window.location.reload()}
+              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+              disabled
+            >
+              🔄 Play Again (Coming Soon)
+            </Button>
+          </div>
         </div>
       </div>
     )
