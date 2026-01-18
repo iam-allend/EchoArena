@@ -185,6 +185,10 @@ export default function RoomLobbyPage() {
 
       console.log('🚪 Leaving room...', { userId: user.id, roomId })
 
+      // ✅ Cleanup Agora connection
+      const AgoraManager = (await import('@/lib/agora/client')).default
+      await AgoraManager.cleanup()
+
       const response = await fetch(`/api/room/${roomId}/leave`, {
         method: 'POST',
         headers: {
@@ -226,43 +230,21 @@ export default function RoomLobbyPage() {
     try {
       console.log('🎮 Starting game...')
 
-      // Update room status to playing
-      const { error: updateError } = await supabase
-        .from('game_rooms')
-        .update({ 
-          status: 'playing',
-          current_stage: 1 
-        })
-        .eq('id', roomId)
-
-      if (updateError) throw updateError
-
-      // Initialize turn queue for stage 1
-      console.log('🎲 Initializing turn queue...')
-      
-      const { data: initData, error: turnError } = await supabase.rpc('initialize_stage_turns', {
-        p_room_id: roomId,
-        p_stage_number: 1
+      // ✅ Call start API (no need to create Daily room)
+      const response = await fetch(`/api/game/${roomId}/start`, {
+        method: 'POST',
       })
 
-      if (turnError) {
-        console.error('❌ Failed to initialize turns:', {
-          error: turnError,
-          message: turnError.message,
-          details: turnError.details,
-          hint: turnError.hint,
-          code: turnError.code
-        })
-        throw new Error(turnError.message || 'Failed to initialize turn queue')
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error)
       }
 
-      console.log('✅ Turn queue initialized:', initData)
+      console.log('✅ Game started! Agora channel:', data.voiceChannelName)
 
-      console.log('✅ Game started! Redirecting...')
+      // Realtime subscription akan redirect otomatis ke game page
 
-      // Redirect to game page
-      router.push(`/game/${roomId}`)
-      
     } catch (error: any) {
       console.error('❌ Start game error:', error)
       alert(`Failed to start game: ${error.message}`)

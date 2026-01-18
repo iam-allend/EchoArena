@@ -11,6 +11,7 @@ import { Loader2, Home, Trophy } from 'lucide-react'
 import { Timer } from '@/components/game/Timer'
 import { QuestionDisplay } from '@/components/game/QuestionDisplay'
 import { GameHeader } from '@/components/game/GameHeader'
+import { VoiceControl } from '@/components/game/VoiceControl'
 
 type GamePhase = 'loading' | 'reading' | 'answering' | 'result' | 'waiting' | 'stage_transition' | 'finished'
 
@@ -149,12 +150,20 @@ export default function GamePage() {
     enabled: !authLoading && !!user,
   })
 
-  // Initialize game
-  useEffect(() => {
-    if (!authLoading && user && roomId) {
-      initializeGame()
-    }
-  }, [authLoading, user, roomId])
+// Initialize game
+useEffect(() => {
+  if (!authLoading && user && roomId) {
+    initializeGame()
+  }
+
+  // ✅ FIX: Cleanup dengan dynamic import
+  return () => {
+    // Cleanup Agora saat leave game page
+    import('@/lib/agora/client').then((module) => {
+      module.default.cleanup()
+    })
+  }
+}, [authLoading, user, roomId])
 
   async function initializeGame() {
     try {
@@ -166,6 +175,7 @@ export default function GamePage() {
       if (!data.success) throw new Error(data.error)
 
       console.log('✅ Game state loaded')
+      console.log('🎤 Voice room URL:', data.game.room.voice_room_url) // ✅ ADD THIS
 
       setGameState(data.game)
       setLoading(false)
@@ -185,7 +195,9 @@ export default function GamePage() {
       alert(`Failed: ${error.message}`)
       router.push('/dashboard')
     }
+    
   }
+  
 
   async function loadCurrentQuestion() {
     try {
@@ -592,7 +604,17 @@ export default function GamePage() {
               myUserId={user.id}
               isHost={gameState.room.host_user_id === user.id}
             />
+
+            {/* ✅ ADD VOICE CONTROL */}
+            <div className="mt-4">
+              <VoiceControl
+                voiceRoomUrl={gameState.room.voice_room_url}
+                isMyTurn={isMyTurn}
+                myUserId={user.id}
+              />
+            </div>
           </div>
+          
 
           <div className="lg:col-span-2 space-y-4">
             {isMyTurn && currentQuestion && phase !== 'result' && !hasAnswered.current && (
@@ -669,5 +691,6 @@ export default function GamePage() {
         </Card>
       </div>
     </div>
+    
   )
 }

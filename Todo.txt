@@ -17,15 +17,15 @@
 - [✅] Room code generation
 
 ### Day 5-7: Game Mechanics
-- [ ] Stage system
-- [ ] Turn queue logic
-- [ ] Question display
-- [ ] Timer component
-- [ ] Answer validation
+- [✅] Stage system
+- [✅] Turn queue logic
+- [✅] Question display
+- [✅] Timer component
+- [✅] Answer validation
 
 ## Week 2: Voice & Features (Jan 15-21)
 
-### Day 8-10: Voice Integration
+### Day 8-10: Voice Integration || CANCEL KITA PAKAI AGORA YG BEBAS
 - [ ] Daily.co setup
 - [ ] Voice room creation
 - [ ] Mic permissions
