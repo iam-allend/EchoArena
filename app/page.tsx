@@ -434,56 +434,7 @@ export default function Home() {
 
         {/* ========== SECTION: TESTIMONIALS ========== */}
         {/* Section untuk menampilkan testimoni dari pengguna */}
-        <div className="max-w-6xl mx-auto mt-32 mb-20 px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              What Our Users Say
-            </h2>
-            <p className="text-purple-200 text-lg">
-              Join thousands of satisfied learners worldwide
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Testimonial 1 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="flex items-center gap-1 mb-4">
-                {[1,2,3,4,5].map(i => <Star key={i} className="w-5 h-5 fill-yellow-500 text-yellow-500" />)}
-              </div>
-              <p className="text-gray-300 mb-4 italic">
-                "EchoArena made studying fun again! The voice feature is incredible and the multiplayer battles keep me motivated."
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
-                  A
-                </div>
-                <div>
-                  <p className="text-white font-semibold">Alex Chen</p>
-                  <p className="text-gray-400 text-sm">High School Student</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Testimonial 2 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="flex items-center gap-1 mb-4">
-                {[1,2,3,4,5].map(i => <Star key={i} className="w-5 h-5 fill-yellow-500 text-yellow-500" />)}
-              </div>
-              <p className="text-gray-300 mb-4 italic">
-                "Best study tool ever! I improved my grades by 30% in just 2 months. Highly recommend!"
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
-                  M
-                </div>
-                <div>
-                  <p className="text-white font-semibold">Michael Brown</p>
-                  <p className="text-gray-400 text-sm">College Student</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        
 
       </div>
               
