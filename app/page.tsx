@@ -1,11 +1,28 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createGuestAccount, getGuestAccountFromStorage } from '@/lib/auth/guest'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Mic, Users, Trophy, Sparkles, Zap, Star, Target } from 'lucide-react'
+import {
+  Loader2,
+  Mic,
+  Users,
+  Trophy,
+  Sparkles,
+  Zap,
+  Star,
+  Target,
+  Code,
+  GraduationCap,
+  Instagram,
+  Github,
+  Lightbulb,
+  CheckCircle,
+  XCircle,
+  BookOpen,
+  Pencil
+} from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -18,18 +35,16 @@ export default function Home() {
 
   async function checkExistingAuth() {
     setCheckingAuth(true)
-
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (session) {
         router.push('/dashboard')
         return
       }
 
       const guestAccount = getGuestAccountFromStorage()
-      
       if (guestAccount) {
         router.push('/dashboard')
         return
@@ -43,20 +58,17 @@ export default function Home() {
 
   async function handlePlayAsGuest() {
     setLoading(true)
-
     try {
       const existingGuest = getGuestAccountFromStorage()
-      
       if (existingGuest) {
         router.push('/dashboard')
         return
       }
-
       await createGuestAccount()
       router.push('/dashboard')
     } catch (error) {
       console.error('Guest creation failed:', error)
-      alert('Failed to create guest account. Please try again.')
+      alert('Gagal membuat akun tamu. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -66,8 +78,8 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
-          <p className="font-medium text-purple-200">Loading EchoArena...</p>
+          <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-purple-400" />
+          <p className="font-medium text-purple-200 text-sm sm:text-base">Memuat EchoArena...</p>
         </div>
       </main>
     )
@@ -75,369 +87,314 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
-      {/* Animated Background Shapes */}
+      {/* Background Quiz Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 -right-20 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/3 right-20 w-80 h-80 bg-violet-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute -top-32 -left-32 w-64 sm:w-96 h-64 sm:h-96 bg-purple-600/10 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute -bottom-32 -right-32 w-64 sm:w-96 h-64 sm:h-96 bg-pink-600/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-48 sm:w-72 h-48 sm:h-72 bg-indigo-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+
+        {/* Quiz icons floating */}
+        <div className="absolute top-[10%] left-[5%] sm:top-[12%] sm:left-[8%] text-5xl sm:text-7xl lg:text-8xl text-yellow-300/15 animate-float-slow">?</div>
+        <div className="absolute top-[25%] right-[8%] sm:top-[20%] sm:right-[12%] text-6xl sm:text-8xl lg:text-9xl text-pink-300/15 animate-float-medium rotate-12">?</div>
+        <div className="absolute bottom-[15%] left-[12%] sm:bottom-[22%] sm:left-[18%] text-5xl sm:text-7xl text-purple-300/18 animate-float-fast">?</div>
+
+        <div className="absolute top-[35%] left-[6%] sm:top-[42%] sm:left-[10%] flex gap-2 sm:gap-3 opacity-25 animate-float-medium">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-green-500/15 rounded-full flex items-center justify-center text-green-300/70 font-bold text-base sm:text-lg border border-green-400/20">A</div>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-red-500/15 rounded-full flex items-center justify-center text-red-300/70 font-bold text-base sm:text-lg border border-red-400/20">B</div>
+        </div>
+
+        <div className="absolute bottom-[28%] right-[7%] sm:bottom-[35%] sm:right-[12%] flex gap-2 sm:gap-3 opacity-20 animate-float-slow">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-blue-500/15 rounded-full flex items-center justify-center text-blue-300/70 font-bold text-base sm:text-lg border border-blue-400/20">C</div>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-yellow-500/15 rounded-full flex items-center justify-center text-yellow-300/70 font-bold text-base sm:text-lg border border-yellow-400/20">D</div>
+        </div>
+
+        <Lightbulb className="absolute top-[48%] left-[10%] sm:top-[55%] sm:left-[15%] w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-yellow-400/20 animate-float-medium" />
+        <CheckCircle className="absolute bottom-[20%] right-[15%] sm:bottom-[25%] sm:right-[22%] w-8 h-8 sm:w-11 sm:h-11 lg:w-14 lg:h-14 text-green-400/18 animate-float-fast" />
+        <XCircle className="absolute top-[58%] right-[18%] sm:top-[65%] sm:right-[25%] w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 text-red-400/18 animate-float-slow" />
+        <BookOpen className="absolute bottom-[38%] left-[8%] sm:bottom-[45%] sm:left-[12%] w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-purple-400/20 animate-float-medium rotate-6" />
+        <Pencil className="absolute top-[32%] left-[20%] sm:top-[38%] sm:left-[28%] w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 text-orange-400/22 animate-float-fast" />
       </div>
 
-      {/* Floating Icons */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <Star className="absolute top-32 left-1/4 w-8 h-8 text-purple-400/30 animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }} />
-        <Sparkles className="absolute top-1/3 right-1/4 w-7 h-7 text-pink-400/30 animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
-        <Zap className="absolute bottom-1/3 left-1/3 w-8 h-8 text-purple-400/30 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.8s' }} />
-        <Trophy className="absolute bottom-32 right-1/3 w-7 h-7 text-pink-400/30 animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.2s' }} />
-      </div>
-
-      <div className="relative flex min-h-screen flex-col items-center justify-center p-8">
-        <div className="text-center max-w-5xl w-full">
-          {/* Logo/Title with Icon */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-purple-500/50 rotate-6 hover:rotate-12 transition-transform">
-              <Trophy className="w-10 h-10 text-white" />
+      {/* Hero Section */}
+      <div className="relative px-4 sm:px-6 lg:px-8 py-12 sm:py-16 min-h-screen flex flex-col items-center justify-center">
+        <div className="text-center max-w-5xl w-full space-y-6 sm:space-y-8 lg:space-y-10">
+          {/* Logo & Title */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-purple-500/50 rotate-6 hover:rotate-12 transition-transform">
+              <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
             </div>
-            <h1 className="text-7xl md:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
               EchoArena
             </h1>
           </div>
 
-          {/* Tagline */}
-          <p className="text-3xl font-bold text-white mb-3">
+          <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
             Where Voices Echo, Champions Rise
           </p>
-          <p className="text-xl text-purple-100 mb-12 max-w-2xl mx-auto">
-            Voice-controlled quiz battles • Real-time multiplayer • Learn by competing
+
+          <p className="text-lg sm:text-xl lg:text-2xl text-purple-100 max-w-3xl mx-auto">
+            Voice-controlled quiz battles • Real-time multiplayer • Belajar sambil bertanding
           </p>
 
-          {/* Auth Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-            {/* Play as Guest */}
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center pt-6 sm:pt-10">
             <Button
               size="lg"
               onClick={handlePlayAsGuest}
               disabled={loading}
-              className="w-full sm:w-auto px-10 py-7 text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-xl shadow-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/60 transition-all hover:scale-105 border-0"
+              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                  Creating Account...
+                  <Loader2 className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6 animate-spin" />
+                  Membuat akun...
                 </>
               ) : (
                 <>
-                  <Zap className="mr-2 h-6 w-6" />
-                  Play as Guest
+                  <Zap className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+                  Main sebagai Tamu
                 </>
               )}
             </Button>
 
-            {/* Register */}
             <Button
               size="lg"
+              variant="outline"
               onClick={() => router.push('/auth/register')}
-              className="w-full sm:w-auto px-10 py-7 text-lg bg-white/10 hover:bg-white/20 text-white font-bold border-2 border-purple-400/50 shadow-lg hover:shadow-xl transition-all hover:scale-105 backdrop-blur-sm"
+              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg border-purple-400/60 hover:bg-purple-500/10 text-white font-bold transition-all hover:scale-105"
             >
-              <Sparkles className="mr-2 h-6 w-6" />
-              Create Account
+              <Sparkles className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+              Buat Akun
             </Button>
 
-            {/* Login */}
             <Button
               size="lg"
+              variant="ghost"
               onClick={() => router.push('/auth/login')}
-              className="w-full sm:w-auto px-10 py-7 text-lg bg-transparent hover:bg-white/10 text-white font-bold border-2 border-white/30 shadow-md hover:shadow-lg transition-all hover:scale-105"
+              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg text-white hover:bg-white/5 border border-white/20 transition-all hover:scale-105"
             >
-              <Star className="mr-2 h-6 w-6" />
-              Login
+              <Star className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+              Masuk
             </Button>
           </div>
 
-          {/* Guest Info */}
-          <div className="inline-flex items-center gap-2 bg-purple-900/50 border-2 border-purple-500/50 px-6 py-3 rounded-full mb-16 shadow-lg backdrop-blur-sm">
+          {/* Guest Warning */}
+          <div className="inline-flex items-center gap-2 bg-purple-900/50 border-2 border-purple-500/50 px-5 sm:px-6 py-3 sm:py-4 rounded-full mt-6 backdrop-blur-sm">
             <Sparkles className="w-5 h-5 text-purple-300" />
-            <p className="text-sm font-medium text-purple-200">
+            <p className="text-sm sm:text-base font-medium text-purple-200">
               <strong className="text-purple-100">Guest accounts</strong> expire after 7 days. Create an account to save progress forever!
             </p>
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border-2 border-purple-500/30 shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 transition-all hover:scale-105 group">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mt-16 sm:mt-24">
+            <div className="bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border-2 border-purple-500/30 shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Mic className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Voice Controlled</h3>
-              <p className="text-gray-300 leading-relaxed">Answer questions with your voice, not clicks. Natural and engaging gameplay</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Voice Controlled</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Answer questions with your voice, not clicks. Natural and engaging gameplay</p>
             </div>
 
-            <div className="bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border-2 border-pink-500/30 shadow-lg hover:shadow-2xl hover:shadow-pink-500/20 transition-all hover:scale-105 group">
+            <div className="bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border-2 border-pink-500/30 shadow-lg hover:shadow-2xl hover:shadow-pink-500/20 transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Multiplayer Rooms</h3>
-              <p className="text-gray-300 leading-relaxed">Battle with 2-8 players in real-time. Make friends while you compete</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Multiplayer Rooms</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Battle with 2-8 players in real-time. Make friends while you compete</p>
             </div>
 
-            <div className="bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border-2 border-orange-500/30 shadow-lg hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 group">
+            <div className="bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border-2 border-orange-500/30 shadow-lg hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Compete & Learn</h3>
-              <p className="text-gray-300 leading-relaxed">Turn-based battles, real knowledge gains. Level up your brain!</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Compete & Learn</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Turn-based battles, real knowledge gains. Level up your brain!</p>
             </div>
           </div>
 
-          {/* Stats Footer */}
-          <div className="mt-16 flex items-center justify-center gap-8 text-sm text-gray-400">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium">Online Players: 1,234</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              <span className="font-medium">Active Battles: 89</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-purple-400" />
-              <span className="font-medium">Questions: 10K+</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ========== SECTION: CATEGORY CARDS ========== */}
-        {/* Carousel card untuk menampilkan berbagai kategori quiz seperti Math, Science, History, dll */}
-        <div className="max-w-7xl mx-auto mt-32 px-4">
-          <h2 className="text-4xl font-bold text-white text-center mb-4">
-            Explore Quiz Categories
-          </h2>
-          <p className="text-purple-200 text-center mb-12 text-lg">
-            Choose from various subjects and start your learning journey
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Card 1: Mathematics */}
-            <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/30 rounded-2xl p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer group">
-              <div className="w-full h-40 bg-yellow-500/10 rounded-xl mb-4 flex items-center justify-center">
-                <div className="text-6xl">📊</div>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-yellow-400 transition-colors">Mathematics</h3>
-              <p className="text-gray-300 text-sm mb-4">Algebra, Geometry, Calculus & more</p>
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <span>120 Quizzes</span>
-                <Sparkles className="w-4 h-4 text-yellow-400" />
-              </div>
-            </div>
-
-            {/* Card 2: Science */}
-            <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-2 border-green-500/30 rounded-2xl p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer group">
-              <div className="w-full h-40 bg-green-500/10 rounded-xl mb-4 flex items-center justify-center">
-                <div className="text-6xl">🔬</div>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors">Science</h3>
-              <p className="text-gray-300 text-sm mb-4">Physics, Chemistry, Biology topics</p>
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <span>95 Quizzes</span>
-                <Sparkles className="w-4 h-4 text-green-400" />
-              </div>
-            </div>
-
-            {/* Card 3: History */}
-            <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-2 border-blue-500/30 rounded-2xl p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer group">
-              <div className="w-full h-40 bg-blue-500/10 rounded-xl mb-4 flex items-center justify-center">
-                <div className="text-6xl">📚</div>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">History</h3>
-              <p className="text-gray-300 text-sm mb-4">World events, civilizations & cultures</p>
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <span>78 Quizzes</span>
-                <Sparkles className="w-4 h-4 text-blue-400" />
-              </div>
-            </div>
-
-            {/* Card 4: Literature */}
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer group">
-              <div className="w-full h-40 bg-purple-500/10 rounded-xl mb-4 flex items-center justify-center">
-                <div className="text-6xl">📖</div>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">Literature</h3>
-              <p className="text-gray-300 text-sm mb-4">Reading comprehension & analysis</p>
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <span>64 Quizzes</span>
-                <Sparkles className="w-4 h-4 text-purple-400" />
-              </div>
+          {/* Quiz Categories */}
+          <div className="max-w-7xl mx-auto mt-16 sm:mt-24 px-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-4">
+              Explore Quiz Categories
+            </h2>
+            <p className="text-purple-200 text-center mb-10 sm:mb-12 text-lg sm:text-xl">
+              Choose from various subjects and start your learning journey
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { emoji: '📊', title: 'Mathematics', desc: 'Algebra, Geometry, Calculus & more', count: '120 Quizzes', color: 'yellow' },
+                { emoji: '🔬', title: 'Science', desc: 'Physics, Chemistry, Biology topics', count: '95 Quizzes', color: 'green' },
+                { emoji: '📚', title: 'History', desc: 'World events, civilizations & cultures', count: '78 Quizzes', color: 'blue' },
+                { emoji: '📖', title: 'Literature', desc: 'Reading comprehension & analysis', count: '64 Quizzes', color: 'purple' }
+              ].map((cat, i) => (
+                <div
+                  key={i}
+                  className={`group bg-gradient-to-br from-${cat.color}-500/20 to-${cat.color}-600/10 border-2 border-${cat.color}-500/30 rounded-2xl p-5 sm:p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer`}
+                >
+                  <div className="w-full h-36 sm:h-40 bg-black/20 rounded-xl mb-4 flex items-center justify-center">
+                    <span className="text-5xl sm:text-6xl">{cat.emoji}</span>
+                  </div>
+                  <h3 className={`text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-${cat.color}-400 transition-colors`}>{cat.title}</h3>
+                  <p className="text-gray-300 text-sm mb-3">{cat.desc}</p>
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>{cat.count}</span>
+                    <Sparkles className={`w-4 h-4 text-${cat.color}-400`} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* ========== SECTION: KEGUNAAN / BENEFITS ========== */}
-        {/* Section untuk menjelaskan kegunaan dan manfaat menggunakan platform */}
-        <div className="max-w-6xl mx-auto mt-32 px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
+          {/* Why Choose */}
+          <div className="max-w-6xl mx-auto mt-16 sm:mt-24 px-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-6">
               Why Choose EchoArena?
             </h2>
-            <p className="text-purple-200 text-lg">
+            <p className="text-purple-200 text-center mb-10 sm:mb-12 text-lg">
               Discover the benefits that make learning fun and effective
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Benefit 1 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
-                <Zap className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Instant Feedback</h3>
-              <p className="text-gray-300 leading-relaxed">
-                Get immediate results and explanations for every answer. Learn from your mistakes in real-time and improve faster with our AI-powered feedback system.
-              </p>
-            </div>
-
-            {/* Benefit 2 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                <Trophy className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Gamified Learning</h3>
-              <p className="text-gray-300 leading-relaxed">
-                Earn points, unlock achievements, and climb the leaderboards. Our gamification system makes studying addictive and rewarding for all ages.
-              </p>
-            </div>
-
-            {/* Benefit 3 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
-                <Users className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Social Learning</h3>
-              <p className="text-gray-300 leading-relaxed">
-                Challenge friends, join study groups, and learn together. Voice chat integration makes collaboration natural and engaging for remote learning.
-              </p>
-            </div>
-
-            {/* Benefit 4 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center mb-4">
-                <Star className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">Personalized Experience</h3>
-              <p className="text-gray-300 leading-relaxed">
-                Adaptive difficulty levels and custom quiz creation. Our AI learns your strengths and weaknesses to provide tailored content that matches your pace.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+              {[
+                { icon: Zap, title: "Instant Feedback", desc: "Immediate results and explanations for every answer.", color: "blue" },
+                { icon: Trophy, title: "Gamified Learning", desc: "Points, achievements, leaderboards.", color: "green" },
+                { icon: Users, title: "Social Learning", desc: "Challenge friends, groups, voice chat.", color: "purple" },
+                { icon: Star, title: "Personalized", desc: "Adaptive difficulty & custom quizzes.", color: "orange" }
+              ].map((item, i) => (
+                <div key={i} className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 sm:p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
+                  <div className={`w-14 h-14 bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+                    <item.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">{item.title}</h3>
+                  <p className="text-gray-300 leading-relaxed text-sm sm:text-base">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* ========== SECTION: TUJUAN / OUR MISSION ========== */}
-        {/* Section untuk menjelaskan tujuan dan visi platform */}
-        <div className="max-w-5xl mx-auto mt-32 px-4">
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-purple-500/30 rounded-3xl p-12 backdrop-blur-xl">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mb-6 shadow-xl">
-                <Target className="w-10 h-10 text-white" />
+          {/* Development Team */}
+          <div className="max-w-6xl mx-auto mt-16 sm:mt-24 px-4 pb-16">
+            <div className="text-center mb-10 sm:mb-14">
+              <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-xl">
+                <Code className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h2 className="text-4xl font-bold text-white mb-4">Our Mission</h2>
-              <p className="text-xl text-purple-200 max-w-3xl mx-auto">
-                To revolutionize education by making learning interactive, accessible, and fun for everyone
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
+                Development Team
+              </h2>
+              <p className="text-purple-200 text-lg sm:text-xl">
+                Dibuat dengan semangat oleh mahasiswa D3 Teknik Informatika Universitas Dian Nuswantoro
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-              <div className="text-center">
-                <div className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                  10K+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              {[
+                {
+                  initials: "AM",
+                  name: "Anur Mustakin",
+                  nim: "A22.2023.03012",
+                  role: "Full Stack Developer",
+                  color: "blue",
+                  github: "https://github.com/anurmustakin",        // GANTI DENGAN LINK ASLI
+                  instagram: "https://instagram.com/anurmustakin"   // GANTI DENGAN LINK ASLI
+                },
+                {
+                  initials: "ZD",
+                  name: "Zikry Dwi Maulana",
+                  nim: "A22.2023.03014",
+                  role: "Frontend Developer",
+                  color: "purple",
+                  github: "https://github.com/zikrydwim",           // GANTI DENGAN LINK ASLI
+                  instagram: "https://instagram.com/zikrydwim"      // GANTI DENGAN LINK ASLI
+                },
+                {
+                  initials: "MN",
+                  name: "Muhammad Najwa Syarif",
+                  nim: "A22.2023.03026",
+                  role: "Backend Developer",
+                  color: "green",
+                  github: "https://github.com/najwasyrf",           // GANTI DENGAN LINK ASLI
+                  instagram: "https://instagram.com/najwasyrf"      // GANTI DENGAN LINK ASLI
+                }
+              ].map((dev, i) => (
+                <div
+                  key={i}
+                  className="group bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 sm:p-8 hover:border-purple-400/50 hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
+                >
+                  <div className="text-center">
+                    <div className={`w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gradient-to-br from-${dev.color}-500 to-${dev.color}-600 rounded-full flex items-center justify-center text-white font-black text-3xl sm:text-4xl mx-auto mb-5 shadow-xl group-hover:scale-110 transition-transform duration-300`}>
+                      {dev.initials}
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{dev.name}</h3>
+
+                    <div className="space-y-1.5 mb-5">
+                      <p className="text-purple-300 text-sm sm:text-base font-medium flex items-center justify-center gap-2">
+                        <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
+                        {dev.nim}
+                      </p>
+                      <p className="text-gray-400 text-sm sm:text-base">D3 Teknik Informatika</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">Universitas Dian Nuswantoro</p>
+                    </div>
+
+                    <div className="inline-block px-4 py-2 bg-gray-800/80 border border-purple-500/40 rounded-full mb-5">
+                      <span className={`text-${dev.color}-300 font-medium text-sm sm:text-base`}>{dev.role}</span>
+                    </div>
+
+                    <div className="flex justify-center gap-5 sm:gap-6">
+                      <a
+                        href={dev.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-gray-200 transition-colors"
+                        aria-label={`GitHub ${dev.name}`}
+                      >
+                        <Github className="w-6 h-6 sm:w-7 sm:h-7" />
+                      </a>
+
+                      <a
+                        href={dev.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-pink-400 transition-colors"
+                        aria-label={`Instagram ${dev.name}`}
+                      >
+                        <Instagram className="w-6 h-6 sm:w-7 sm:h-7" />
+                      </a>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-gray-300">Active Users</p>
-              </div>
-              <div className="text-center">
-                <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2">
-                  500+
-                </div>
-                <p className="text-gray-300">Quiz Categories</p>
-              </div>
-              <div className="text-center">
-                <div className="text-5xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
-                  1M+
-                </div>
-                <p className="text-gray-300">Questions Answered</p>
-              </div>
+              ))}
             </div>
-          </div>
-        </div>
 
-        {/* ========== SECTION: HOW IT WORKS ========== */}
-        {/* Section untuk menjelaskan cara kerja platform step by step */}
-        <div className="max-w-6xl mx-auto mt-32 px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              How It Works
-            </h2>
-            <p className="text-purple-200 text-lg">
-              Get started in 3 simple steps
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="bg-gray-900/80 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-8 text-center hover:shadow-xl hover:shadow-blue-500/20 transition-all">
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  1
-                </div>
-                <div className="mt-4 mb-4">
-                  <div className="text-6xl mb-4">🎮</div>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Create or Join Room</h3>
-                <p className="text-gray-300">
-                  Start by creating your own quiz room or join an existing one with a room code
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 text-center hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  2
-                </div>
-                <div className="mt-4 mb-4">
-                  <div className="text-6xl mb-4">🎤</div>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Use Your Voice</h3>
-                <p className="text-gray-300">
-                  Answer questions using voice commands - natural and hands-free interaction
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="bg-gray-900/80 backdrop-blur-xl border border-green-500/30 rounded-2xl p-8 text-center hover:shadow-xl hover:shadow-green-500/20 transition-all">
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  3
-                </div>
-                <div className="mt-4 mb-4">
-                  <div className="text-6xl mb-4">🏆</div>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Compete & Win</h3>
-                <p className="text-gray-300">
-                  Battle with others, earn points, and climb the leaderboard to become champion
-                </p>
+            {/* CTA follow proyek */}
+            <div className="text-center mt-10 sm:mt-14 text-purple-300">
+              <p className="text-base sm:text-lg mb-4">
+                Ikuti perkembangan proyek ini di GitHub dan Instagram!
+              </p>
+              <div className="flex justify-center gap-6 sm:gap-8">
+                <a
+                  href="https://github.com/[username-proyek]" // GANTI DENGAN REPO PROYEK
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-gray-300 hover:text-white font-medium transition-colors"
+                >
+                  <Github className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-sm sm:text-base">GitHub</span>
+                </a>
+                <a
+                  href="https://instagram.com/echoarena.id" // GANTI DENGAN AKUN RESMI
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-pink-400 hover:text-pink-300 font-medium transition-colors"
+                >
+                  <Instagram className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-sm sm:text-base">@echoarena.id</span>
+                </a>
               </div>
             </div>
           </div>
         </div>
-
-        {/* ========== SECTION: TESTIMONIALS ========== */}
-        {/* Section untuk menampilkan testimoni dari pengguna */}
-        
-
       </div>
-              
     </main>
   )
 }
