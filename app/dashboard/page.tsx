@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getGuestDaysRemaining } from '@/lib/auth/guest'
+
+import { MusicControl } from '@/components/ui/MusicControl'
+
 import {
   Loader2, AlertTriangle, Crown, LogOut, Play, Clock, CheckCircle,
   Sparkles, Trophy, Star, Zap, Users, Target, BookOpen, Plus,
@@ -445,6 +448,10 @@ export default function Dashboard() {
 
         </div>
       </div>
+            
+    <MusicControl trackUrl="/audio/dashboard/dashboard-music-2.mp3" />
+      
     </div>
+    
   )
 }

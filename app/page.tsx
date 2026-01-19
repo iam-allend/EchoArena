@@ -4,6 +4,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createGuestAccount, getGuestAccountFromStorage } from '@/lib/auth/guest'
 import { createClient } from '@/lib/supabase/client'
+
+import { MusicControl } from '@/components/ui/MusicControl'
+
+
 import {
   Loader2,
   Mic,
@@ -262,7 +266,7 @@ export default function Home() {
                 { icon: Star, title: "Personalized", desc: "Adaptive difficulty & custom quizzes.", color: "orange" }
               ].map((item, i) => (
                 <div key={i} className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 sm:p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-                  <div className={`w-14 h-14 bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+                  <div className={`w-14 h-14 bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 rounded-xl flex items-center justify-center mb-4 shadow-lg m m-auto`}>
                     <item.icon className="w-7 h-7 text-white" />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">{item.title}</h3>
@@ -294,8 +298,8 @@ export default function Home() {
                   nim: "A22.2023.03012",
                   role: "Full Stack Developer",
                   color: "blue",
-                  github: "https://github.com/anurmustakin",        // GANTI DENGAN LINK ASLI
-                  instagram: "https://instagram.com/anurmustakin"   // GANTI DENGAN LINK ASLI
+                  github: "https://github.com/iam-allend",        // GANTI DENGAN LINK ASLI
+                  instagram: "https://instagram.com/iam.allend"   // GANTI DENGAN LINK ASLI
                 },
                 {
                   initials: "ZD",
@@ -373,7 +377,7 @@ export default function Home() {
               </p>
               <div className="flex justify-center gap-6 sm:gap-8">
                 <a
-                  href="https://github.com/[username-proyek]" // GANTI DENGAN REPO PROYEK
+                  href="https://github.com/iam-allend/EchoArena" // GANTI DENGAN REPO PROYEK
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-gray-300 hover:text-white font-medium transition-colors"
@@ -382,7 +386,7 @@ export default function Home() {
                   <span className="text-sm sm:text-base">GitHub</span>
                 </a>
                 <a
-                  href="https://instagram.com/echoarena.id" // GANTI DENGAN AKUN RESMI
+                  href="https://instagram.com/iam.allend" // GANTI DENGAN AKUN RESMI
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-pink-400 hover:text-pink-300 font-medium transition-colors"
@@ -395,6 +399,10 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <MusicControl trackUrl="/audio/home/upbeat-game-menu.mp3" />
+
     </main>
+    
   )
 }
