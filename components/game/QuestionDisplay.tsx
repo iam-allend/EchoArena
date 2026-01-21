@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { CheckCircle, XCircle } from 'lucide-react'
-import { VoiceAnswerControl } from './VoiceAnswerControl' // ✅ ADD THIS
+import { CheckCircle, XCircle, Eye, Zap } from 'lucide-react'
+import { VoiceAnswerControl } from './VoiceAnswerControl'
 
 interface Question {
   id: number
@@ -26,7 +26,7 @@ interface QuestionDisplayProps {
     isCorrect: boolean
   }
   disabled?: boolean
-  phase?: 'reading' | 'answering' // ✅ ADD THIS
+  phase?: 'reading' | 'answering'
 }
 
 export function QuestionDisplay({ 
@@ -35,7 +35,7 @@ export function QuestionDisplay({
   isMyTurn,
   showResult,
   disabled = false,
-  phase = 'answering' // ✅ ADD THIS
+  phase = 'answering'
 }: QuestionDisplayProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null)
 
@@ -62,7 +62,6 @@ export function QuestionDisplay({
   }
 
   const getOptionStyle = (letter: 'A' | 'B' | 'C' | 'D') => {
-    // Show result mode
     if (showResult) {
       if (letter === showResult.correctAnswer) {
         return 'border-green-500 bg-green-500/20'
@@ -73,7 +72,6 @@ export function QuestionDisplay({
       return 'border-white/20 bg-white/5 opacity-50'
     }
 
-    // Selection mode
     if (selectedAnswer === letter) {
       return 'border-purple-500 bg-purple-500/20 scale-105'
     }
@@ -82,8 +80,33 @@ export function QuestionDisplay({
   }
 
   return (
-    <div className="space-y-4"> {/* ✅ WRAP IN DIV */}
-      {/* ✅ ADD VOICE ANSWER CONTROL */}
+    <div className="space-y-4">
+      {/* ✅ ACTIVE PLAYER BANNER */}
+      {isMyTurn && phase === 'answering' && !showResult && (
+        <Card className="bg-gradient-to-r from-green-500/30 to-emerald-500/30 border-2 border-green-400 p-4 animate-pulse">
+          <div className="flex items-center justify-center gap-3">
+            <Zap className="h-6 w-6 text-green-300 animate-bounce" />
+            <p className="text-white font-bold text-xl">
+              🎤 YOUR TURN - Answer Now!
+            </p>
+            <Zap className="h-6 w-6 text-green-300 animate-bounce" />
+          </div>
+        </Card>
+      )}
+
+      {/* ✅ SPECTATOR BANNER */}
+      {!isMyTurn && !showResult && (
+        <Card className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-2 border-blue-400/50 p-4">
+          <div className="flex items-center justify-center gap-3">
+            <Eye className="h-5 w-5 text-blue-300" />
+            <p className="text-blue-200 font-semibold text-lg">
+              👀 Spectator Mode - Watch & Listen
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Voice Answer Control */}
       {isMyTurn && phase === 'answering' && !showResult && (
         <VoiceAnswerControl
           onAnswer={handleSelect}
@@ -92,21 +115,33 @@ export function QuestionDisplay({
         />
       )}
 
-      <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-6">
+      {/* ✅ MAIN CARD - Different styles for active vs spectator */}
+      <Card className={`
+        backdrop-blur-sm p-6 transition-all duration-300
+        ${isMyTurn && !showResult
+          ? 'bg-gradient-to-br from-purple-900/50 to-pink-900/50 border-4 border-green-400 shadow-2xl shadow-green-500/50'
+          : 'bg-white/10 border-white/20 opacity-80'
+        }
+      `}>
         {/* Difficulty Badge */}
         <div className="flex justify-between items-start mb-4">
           <span className={`px-3 py-1 rounded text-sm font-semibold text-white ${getDifficultyColor(question.difficulty)}`}>
-            {question.difficulty}
+            {question.difficulty.toUpperCase()}
           </span>
-          {!isMyTurn && !showResult && (
-            <span className="text-yellow-400 text-sm font-semibold animate-pulse">
-              ⏳ Wait for your turn...
-            </span>
+          
+          {/* Turn Indicator */}
+          {isMyTurn && !showResult && (
+            <div className="flex items-center gap-2 bg-green-500/20 px-3 py-1 rounded-full border border-green-400">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-ping" />
+              <span className="text-green-300 text-sm font-bold">ACTIVE</span>
+            </div>
           )}
         </div>
 
         {/* Question Text */}
-        <h2 className="text-2xl font-bold text-white mb-6">
+        <h2 className={`text-2xl font-bold mb-6 ${
+          isMyTurn ? 'text-white' : 'text-purple-200'
+        }`}>
           {question.question_text}
         </h2>
 
@@ -121,26 +156,26 @@ export function QuestionDisplay({
                 relative p-4 rounded-lg border-2 transition-all duration-200
                 text-left
                 ${getOptionStyle(option.letter)}
-                ${(!isMyTurn || disabled || showResult) ? 'cursor-not-allowed' : 'cursor-pointer'}
+                ${(!isMyTurn || disabled || showResult) ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-105'}
+                ${isMyTurn && !disabled && !showResult ? 'hover:shadow-lg hover:shadow-purple-500/50' : ''}
               `}
             >
-              {/* Letter Badge */}
               <div className="flex items-start gap-3">
                 <div className={`
                   flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold
                   ${selectedAnswer === option.letter || showResult?.correctAnswer === option.letter
                     ? 'bg-white text-purple-900' 
-                    : 'bg-purple-500 text-white'}
+                    : isMyTurn ? 'bg-purple-500 text-white' : 'bg-purple-400 text-white'}
                 `}>
                   {option.letter}
                 </div>
                 
-                {/* Option Text */}
-                <p className="text-white font-medium flex-1 mt-1">
+                <p className={`font-medium flex-1 mt-1 ${
+                  isMyTurn ? 'text-white' : 'text-purple-200'
+                }`}>
                   {option.text}
                 </p>
 
-                {/* Result Icons */}
                 {showResult && (
                   <>
                     {option.letter === showResult.correctAnswer && (
@@ -156,11 +191,13 @@ export function QuestionDisplay({
           ))}
         </div>
 
-        {/* Waiting message */}
+        {/* Waiting Message */}
         {!isMyTurn && !showResult && (
-          <p className="text-center text-purple-200 mt-4">
-            🎤 Another player is answering...
-          </p>
+          <div className="mt-6 text-center">
+            <p className="text-purple-300 text-lg font-medium">
+              🎧 Listen to other players answering...
+            </p>
+          </div>
         )}
       </Card>
     </div>

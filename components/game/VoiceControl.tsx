@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Mic, MicOff, VolumeX, Loader2 } from 'lucide-react'
+import { Mic, MicOff, VolumeX, Loader2, Lock } from 'lucide-react'
 import AgoraManager from '@/lib/agora/client'
 import type { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng'
 
@@ -17,7 +17,6 @@ export function VoiceControl({
   isMyTurn, 
   myUserId, 
   phase = 'waiting'  
-
 }: VoiceControlProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -35,25 +34,27 @@ export function VoiceControl({
 
     return () => {
       console.log('🧹 VoiceControl cleanup')
-      // Jangan cleanup di sini, biarkan global manager handle
     }
   }, [])
 
-  // Auto mute/unmute based on turn
+  // ✅ FORCE MUTE/UNMUTE based on turn AND phase
   useEffect(() => {
     if (isConnected) {
-      // Unmute ONLY during answering phase
-      if (isMyTurn && phase === 'answering') {
+      const canSpeak = isMyTurn && phase === 'answering'
+      
+      if (canSpeak) {
+        // Unmute only during answering phase
         setIsMuted(false)
         AgoraManager.setMuted(false)
         console.log('🎤 Auto-unmuted (answering phase)')
       } else {
+        // Force mute in all other cases
         setIsMuted(true)
         AgoraManager.setMuted(true)
-        console.log('🔇 Auto-muted')
+        console.log('🔇 Force muted')
       }
     }
-  }, [isMyTurn, isConnected, phase]) // ✅ ADD phase dependency
+  }, [isMyTurn, isConnected, phase])
 
   async function connectToVoice() {
     if (!voiceRoomUrl) return
@@ -64,8 +65,6 @@ export function VoiceControl({
     try {
       console.log('🎤 Connecting to Agora voice...')
 
-      // Extract channel name from voiceRoomUrl
-      // Format: "agora-channel-<roomId>" or just use roomId
       const channelName = voiceRoomUrl.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 64)
 
       const { client, audioTrack } = await AgoraManager.joinChannel(channelName, myUserId)
@@ -88,9 +87,7 @@ export function VoiceControl({
       client.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
         if (mediaType === 'audio') {
           console.log('🎵 User published audio:', user.uid)
-          // Subscribe to remote audio
           await client.subscribe(user, mediaType)
-          // Audio akan auto-play di browser
           user.audioTrack?.play()
         }
       })
@@ -127,7 +124,13 @@ export function VoiceControl({
   }
 
   function toggleMute() {
-    if (!isConnected) return
+    // ✅ Only allow toggle if it's my turn AND answering phase
+    const canSpeak = isMyTurn && phase === 'answering'
+    
+    if (!isConnected || !canSpeak) {
+      console.log('⚠️ Cannot toggle mic - not your turn or wrong phase')
+      return
+    }
 
     const newMuted = !isMuted
     AgoraManager.setMuted(newMuted)
@@ -180,8 +183,14 @@ export function VoiceControl({
     )
   }
 
+  const canSpeak = isMyTurn && phase === 'answering'
+
   return (
-    <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
+    <Card className={`backdrop-blur-sm border-2 p-4 transition-all ${
+      canSpeak 
+        ? 'bg-green-500/20 border-green-400' 
+        : 'bg-white/10 border-white/20'
+    }`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
@@ -194,17 +203,25 @@ export function VoiceControl({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="space-y-2">
+        {/* ✅ Mic Button - DISABLED when not your turn */}
         <Button
           onClick={toggleMute}
-          disabled={!isConnected}
-          className={`flex-1 ${
-            isMuted 
-              ? 'bg-red-500/50 hover:bg-red-600/50' 
-              : 'bg-green-500/50 hover:bg-green-600/50'
+          disabled={!isConnected || !canSpeak}
+          className={`w-full ${
+            !canSpeak
+              ? 'bg-gray-500/50 cursor-not-allowed'
+              : isMuted 
+                ? 'bg-red-500/50 hover:bg-red-600/50' 
+                : 'bg-green-500/50 hover:bg-green-600/50'
           }`}
         >
-          {isMuted ? (
+          {!canSpeak ? (
+            <>
+              <Lock className="mr-2 h-4 w-4" />
+              Mic Locked
+            </>
+          ) : isMuted ? (
             <>
               <MicOff className="mr-2 h-4 w-4" />
               Muted
@@ -217,19 +234,26 @@ export function VoiceControl({
           )}
         </Button>
 
+        {/* Status Messages */}
         {!isMyTurn && (
-          <div className="flex items-center gap-1 text-yellow-400 text-xs">
+          <div className="flex items-center gap-2 text-yellow-400 text-xs justify-center bg-yellow-500/10 py-2 rounded">
             <VolumeX className="h-4 w-4" />
-            <span>Not your turn</span>
+            <span>Mic disabled - Not your turn</span>
           </div>
         )}
-      </div>
 
-      {isMyTurn && !isMuted && (
-        <p className="text-green-400 text-xs mt-2 text-center animate-pulse">
-          🎤 You can speak now!
-        </p>
-      )}
+        {isMyTurn && phase === 'reading' && (
+          <div className="text-blue-400 text-xs text-center bg-blue-500/10 py-2 rounded">
+            📖 Reading phase - Mic will unlock during answering
+          </div>
+        )}
+
+        {isMyTurn && phase === 'answering' && !isMuted && (
+          <p className="text-green-400 text-xs text-center animate-pulse bg-green-500/10 py-2 rounded font-semibold">
+            🎤 You can speak now!
+          </p>
+        )}
+      </div>
     </Card>
   )
 }

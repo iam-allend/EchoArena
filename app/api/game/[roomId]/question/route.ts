@@ -11,6 +11,7 @@ export async function GET(
 
     console.log('❓ Getting question for room:', roomId)
 
+    // Get room info
     const { data: room } = await supabase
       .from('game_rooms')
       .select('current_stage')
@@ -19,21 +20,47 @@ export async function GET(
 
     if (!room) throw new Error('Room not found')
 
-    // Get random question
+    // ✅ Get difficulty based on stage
+    const { data: difficultyData } = await supabase
+      .rpc('get_stage_difficulty', {
+        p_stage_number: room.current_stage
+      })
+
+    const difficulty = difficultyData || 'medium'
+
+    console.log(`📊 Stage ${room.current_stage} → Difficulty: ${difficulty}`)
+
+    // ✅ Get random question (excluding used ones)
     const { data: questions, error: questionError } = await supabase
       .rpc('get_random_question', {
         p_category_id: null,
-        p_difficulty: null,
+        p_difficulty: difficulty,
+        p_room_id: roomId // ✅ Pass room_id to exclude used questions
       })
 
     if (questionError) throw questionError
 
     const question = questions?.[0]
-    if (!question) throw new Error('No questions available')
+    if (!question) {
+      console.error('❌ No more unused questions available!')
+      throw new Error('No questions available for this difficulty')
+    }
 
-    console.log('✅ Question fetched:', question.id)
+    console.log('✅ Question fetched:', question.id, '- Difficulty:', question.difficulty)
 
-    // ✅ Store in active_questions untuk backup
+    // ✅ Mark question as used
+    await supabase
+      .from('room_used_questions')
+      .insert({
+        room_id: roomId,
+        question_id: question.id,
+        stage_number: room.current_stage
+      })
+      .select()
+
+    console.log('📝 Question marked as used')
+
+    // Store in active_questions
     await supabase
       .from('active_questions')
       .upsert({
@@ -51,7 +78,7 @@ export async function GET(
         onConflict: 'room_id,stage_number'
       })
 
-    // ✅ BROADCAST via Realtime Channel
+    // ✅ BROADCAST via Realtime
     const broadcastChannel = supabase.channel(`room:${roomId}:broadcast`)
     
     await broadcastChannel.subscribe(async (status) => {
@@ -66,9 +93,8 @@ export async function GET(
           },
         })
         
-        console.log('📡 Question broadcasted via channel')
+        console.log('📡 Question broadcasted')
         
-        // Cleanup
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
         }, 1000)
