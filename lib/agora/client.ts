@@ -1,10 +1,19 @@
 'use client'
 
-import AgoraRTC, { 
+// ✅ FIX: Dynamic import with SSR guard + better typing
+import type { 
   IAgoraRTCClient, 
-  IMicrophoneAudioTrack,
-  IAgoraRTCRemoteUser
+  IMicrophoneAudioTrack 
 } from 'agora-rtc-sdk-ng'
+
+let AgoraRTC: any = null
+
+// Only load Agora in browser environment
+if (typeof window !== 'undefined') {
+  import('agora-rtc-sdk-ng').then((module) => {
+    AgoraRTC = module.default
+  })
+}
 
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID!
 
@@ -14,7 +23,6 @@ class AgoraManager {
   private static currentChannel: string | null = null
   private static isJoined: boolean = false
 
-  // ✅ NEW: Fetch token from server
   private static async getToken(channelName: string, uid: string): Promise<string> {
     try {
       const response = await fetch('/api/agora/token', {
@@ -37,40 +45,48 @@ class AgoraManager {
   }
 
   static async joinChannel(channelName: string, userId: string) {
+    // ✅ Wait for Agora to load
+    if (!AgoraRTC) {
+      // Wait up to 3 seconds for dynamic import
+      let attempts = 0
+      while (!AgoraRTC && attempts < 30) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+      
+      if (!AgoraRTC) {
+        throw new Error('Agora RTC failed to load')
+      }
+    }
+
     try {
-      // Jika sudah join channel yang sama, return existing
       if (this.isJoined && this.currentChannel === channelName) {
         console.log('♻️ Already joined this channel')
         return { client: this.client!, audioTrack: this.localAudioTrack! }
       }
 
-      // Cleanup existing connection
       await this.cleanup()
 
       console.log('🎤 Creating Agora client for channel:', channelName)
 
-      // Create client
       this.client = AgoraRTC.createClient({ 
         mode: 'rtc', 
         codec: 'vp8' 
       })
 
-      // ✅ Get token from server
       console.log('🔑 Fetching token...')
       const token = await this.getToken(channelName, userId)
       console.log('✅ Token received')
 
-      // ✅ Join channel WITH TOKEN
       const uid = await this.client.join(
         APP_ID,
         channelName,
-        token,  // ← Use token instead of null
+        token,
         userId
       )
 
       console.log('✅ Joined channel with UID:', uid)
 
-      // Create & publish microphone track
       this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
         encoderConfig: 'speech_standard',
       })

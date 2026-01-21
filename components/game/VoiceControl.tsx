@@ -25,6 +25,7 @@ export function VoiceControl({
   const [participants, setParticipants] = useState<Set<string>>(new Set())
 
   const hasConnected = useRef(false)
+  const previousPhase = useRef(phase) // ✅ Track phase changes
 
   useEffect(() => {
     if (voiceRoomUrl && !hasConnected.current) {
@@ -37,21 +38,32 @@ export function VoiceControl({
     }
   }, [])
 
-  // ✅ AUTO MUTE/UNMUTE - Only control MY microphone
+  // ✅ FIX: Force unmute on phase change to 'answering'
   useEffect(() => {
-    if (isConnected) {
-      const canSpeak = isMyTurn && phase === 'answering'
-      
-      // Always mute my mic when not my turn
-      // BUT still able to HEAR others via Agora audio playback
-      const shouldMute = !canSpeak
-      
-      setIsMuted(shouldMute)
-      AgoraManager.setMuted(shouldMute)
-      
-      console.log(canSpeak ? '🎤 Auto-unmuted (can speak)' : '🔇 Auto-muted (listening only)')
+    if (!isConnected) return
+
+    const canSpeak = isMyTurn && phase === 'answering'
+    const phaseChanged = previousPhase.current !== phase
+    
+    if (phaseChanged) {
+      console.log(`📍 Phase changed: ${previousPhase.current} → ${phase}`)
+      previousPhase.current = phase
     }
-  }, [isMyTurn, isConnected, phase])
+
+    if (canSpeak) {
+      // ✅ FORCE unmute immediately when answering starts
+      console.log('🎤 FORCING unmute for answering phase!')
+      setIsMuted(false)
+      AgoraManager.setMuted(false)
+    } else {
+      // Mute when not answering
+      if (!isMuted) {
+        console.log('🔇 Auto-muting (not answering)')
+        setIsMuted(true)
+        AgoraManager.setMuted(true)
+      }
+    }
+  }, [isMyTurn, phase, isConnected]) // Remove isMuted from deps
 
   async function connectToVoice() {
     if (!voiceRoomUrl) return
@@ -84,8 +96,19 @@ export function VoiceControl({
       client.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
         if (mediaType === 'audio') {
           console.log('🎵 User published audio:', user.uid)
-          await client.subscribe(user, mediaType)
-          user.audioTrack?.play()
+          
+          try {
+            await client.subscribe(user, mediaType)
+            console.log('✅ Subscribed to:', user.uid)
+            
+            // ✅ Force play with error handling
+            if (user.audioTrack) {
+              user.audioTrack.play()
+              console.log('🔊 Playing audio from:', user.uid)
+            }
+          } catch (err) {
+            console.error('❌ Subscribe/play error:', err)
+          }
         }
       })
 
@@ -132,6 +155,8 @@ export function VoiceControl({
     const newMuted = !isMuted
     AgoraManager.setMuted(newMuted)
     setIsMuted(newMuted)
+    
+    console.log(newMuted ? '🔇 Manually muted' : '🎤 Manually unmuted')
   }
 
   function handleRetry() {
@@ -201,7 +226,32 @@ export function VoiceControl({
       </div>
 
       <div className="space-y-2">
-        {/* ✅ Mic Button - DISABLED when not your turn */}
+        {/* ✅ Mic Status Display */}
+        <div className={`p-3 rounded-lg border-2 ${
+          canSpeak && !isMuted
+            ? 'bg-green-500/20 border-green-400'
+            : 'bg-gray-500/20 border-gray-500'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-white text-sm font-semibold">
+              Microphone Status
+            </span>
+            {canSpeak && !isMuted && (
+              <span className="text-green-400 text-xs font-bold animate-pulse">
+                🔴 LIVE
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-300 mt-1">
+            {canSpeak && !isMuted 
+              ? '✅ Broadcasting - Others can hear you!' 
+              : isMuted 
+                ? '🔇 Muted - Not broadcasting' 
+                : '⏸️ Standby'}
+          </p>
+        </div>
+
+        {/* ✅ Manual Toggle Button */}
         <Button
           onClick={toggleMute}
           disabled={!isConnected || !canSpeak}
@@ -221,12 +271,12 @@ export function VoiceControl({
           ) : isMuted ? (
             <>
               <MicOff className="mr-2 h-4 w-4" />
-              Muted
+              Click to Unmute
             </>
           ) : (
             <>
               <Mic className="mr-2 h-4 w-4" />
-              Speaking
+              Click to Mute
             </>
           )}
         </Button>
@@ -235,20 +285,20 @@ export function VoiceControl({
         {!isMyTurn && (
           <div className="flex items-center gap-2 text-yellow-400 text-xs justify-center bg-yellow-500/10 py-2 rounded">
             <VolumeX className="h-4 w-4" />
-            <span>Mic disabled - Not your turn</span>
+            <span>Listening mode - Not your turn</span>
           </div>
         )}
 
         {isMyTurn && phase === 'reading' && (
           <div className="text-blue-400 text-xs text-center bg-blue-500/10 py-2 rounded">
-            📖 Reading phase - Mic will unlock during answering
+            📖 Reading phase - Mic will auto-unlock
           </div>
         )}
 
-        {isMyTurn && phase === 'answering' && !isMuted && (
-          <p className="text-green-400 text-xs text-center animate-pulse bg-green-500/10 py-2 rounded font-semibold">
-            🎤 You can speak now!
-          </p>
+        {isMyTurn && phase === 'answering' && (
+          <div className="text-green-400 text-xs text-center bg-green-500/10 py-2 rounded font-semibold">
+            🎤 Answering phase - {isMuted ? 'Click button to speak!' : 'You are speaking!'}
+          </div>
         )}
       </div>
     </Card>

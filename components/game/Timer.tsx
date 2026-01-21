@@ -1,17 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Clock } from 'lucide-react'
 
 interface TimerProps {
-  duration: number // seconds
+  duration: number
   onComplete: () => void
   label?: string
 }
 
 export function Timer({ duration, onComplete, label = 'Time Remaining' }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration)
+  
+  // ✅ FIX: Use ref to prevent render violation
+  const onCompleteRef = useRef(onComplete)
+  
+  // ✅ Keep ref updated
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
   useEffect(() => {
     setTimeLeft(duration)
@@ -20,7 +28,12 @@ export function Timer({ duration, onComplete, label = 'Time Remaining' }: TimerP
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          onComplete()
+          
+          // ✅ FIX: Call via setTimeout to avoid render violation
+          setTimeout(() => {
+            onCompleteRef.current()
+          }, 0)
+          
           return 0
         }
         return prev - 1
@@ -28,7 +41,7 @@ export function Timer({ duration, onComplete, label = 'Time Remaining' }: TimerP
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [duration, onComplete])
+  }, [duration]) // ✅ Remove onComplete from deps
 
   const percentage = (timeLeft / duration) * 100
   const isUrgent = timeLeft <= 3
@@ -51,7 +64,6 @@ export function Timer({ duration, onComplete, label = 'Time Remaining' }: TimerP
         </span>
       </div>
 
-      {/* Progress Bar */}
       <div className="w-full bg-black/30 rounded-full h-2 overflow-hidden">
         <div
           className={`h-full transition-all duration-1000 ${

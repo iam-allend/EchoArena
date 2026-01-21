@@ -24,7 +24,8 @@ export function VoiceAnswerControl({
   const [confidence, setConfidence] = useState<number>(0)
 
   const recognitionRef = useRef<any>(null)
-  const answerSubmittedRef = useRef(false) // Prevent double submission
+  const answerSubmittedRef = useRef(false)
+  const isStartingRef = useRef(false) // ✅ NEW: Prevent race condition
 
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -36,16 +37,17 @@ export function VoiceAnswerControl({
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
     const recognition = new SpeechRecognition()
 
-    recognition.continuous = true // ✅ Keep listening
+    recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = 'id-ID'
-    recognition.maxAlternatives = 5 // ✅ Get more alternatives
+    recognition.maxAlternatives = 5
 
     recognition.onstart = () => {
       console.log('🎤 Voice recognition started')
       setIsListening(true)
       setError(null)
       answerSubmittedRef.current = false
+      isStartingRef.current = false // ✅ Reset flag
     }
 
     recognition.onresult = (event: any) => {
@@ -57,7 +59,6 @@ export function VoiceAnswerControl({
       setTranscript(transcript)
       setConfidence(confidence)
 
-      // ✅ Parse answer with improved logic
       const answer = parseAnswer(transcript)
       
       if (answer && !answerSubmittedRef.current) {
@@ -65,18 +66,21 @@ export function VoiceAnswerControl({
         setDetectedAnswer(answer)
         answerSubmittedRef.current = true
         
-        // ✅ Visual feedback + submit
         setTimeout(() => {
           onAnswer(answer)
           stopListening()
-        }, 800) // Slightly longer delay for user to see
+        }, 800)
       }
     }
 
     recognition.onerror = (event: any) => {
       console.error('❌ Speech recognition error:', event.error)
       
-      // ✅ Better error handling
+      // ✅ Ignore "aborted" error (happens on manual stop)
+      if (event.error === 'aborted') {
+        return
+      }
+      
       if (event.error === 'no-speech') {
         setError('No speech detected. Try speaking louder.')
       } else if (event.error === 'audio-capture') {
@@ -88,16 +92,18 @@ export function VoiceAnswerControl({
       }
       
       setIsListening(false)
+      isStartingRef.current = false // ✅ Reset flag
     }
 
     recognition.onend = () => {
       console.log('🛑 Voice recognition ended')
       setIsListening(false)
+      isStartingRef.current = false // ✅ Reset flag
       
-      // ✅ Auto-restart if still active and no answer yet
-      if (isActive && !answerSubmittedRef.current && !error) {
+      // ✅ Auto-restart only if conditions met
+      if (isActive && !answerSubmittedRef.current && !error && !disabled) {
         console.log('🔄 Auto-restarting recognition...')
-        setTimeout(() => startListening(), 100)
+        setTimeout(() => startListening(), 300) // ✅ Longer delay
       }
     }
 
@@ -108,11 +114,10 @@ export function VoiceAnswerControl({
         recognitionRef.current.abort()
       }
     }
-  }, [isActive, error])
+  }, [isActive, error, disabled])
 
-  // Auto-start when active
   useEffect(() => {
-    if (isActive && !disabled && isSupported && !isListening) {
+    if (isActive && !disabled && isSupported && !isListening && !isStartingRef.current) {
       startListening()
     } else if (!isActive && isListening) {
       stopListening()
@@ -125,7 +130,6 @@ export function VoiceAnswerControl({
     }
   }, [isActive, disabled, isSupported])
 
-  // ✅ IMPROVED PARSING - Better B/D differentiation
   const parseAnswer = (text: string): 'A' | 'B' | 'C' | 'D' | null => {
     const normalized = text
       .toLowerCase()
@@ -134,25 +138,19 @@ export function VoiceAnswerControl({
 
     console.log('🔍 Parsing:', normalized)
 
-    // 1. EXACT single letter (strict)
+    // 1. Exact single letter
     if (/^a+$/.test(normalized)) return 'A'
     if (/^b+$/.test(normalized)) return 'B'
     if (/^c+$/.test(normalized)) return 'C'
     if (/^d+$/.test(normalized)) return 'D'
 
-    // 2. INDONESIAN phonetics (specific patterns)
+    // 2. Indonesian phonetics
     if (/\b(ei|ey|ay|eh)\b/.test(normalized)) return 'A'
-    
-    // B patterns - avoid "pi/p" confusion
     if (/\b(bi|bee|beh|be)\b/.test(normalized) && !/(pi|p|ti|ci|si|di)/i.test(normalized)) return 'B'
-    
-    // C patterns - "si/see/ce"
     if (/\b(si|see|ce|cee|seh|se)\b/.test(normalized)) return 'C'
-    
-    // D patterns - avoid "ti/t" confusion  
     if (/\b(di|dee|deh|de)\b/.test(normalized) && !/(ti|t|si|ci|bi)/i.test(normalized)) return 'D'
 
-    // 3. NUMBERS (safest method)
+    // 3. Numbers (safest)
     if (/\b(1|satu|one)\b/.test(normalized)) return 'A'
     if (/\b(2|dua|two)\b/.test(normalized)) return 'B'
     if (/\b(3|tiga|three)\b/.test(normalized)) return 'C'
@@ -164,7 +162,7 @@ export function VoiceAnswerControl({
     if (/charlie|charly/.test(normalized)) return 'C'
     if (/delta/.test(normalized)) return 'D'
 
-    // 5. COMMAND phrases
+    // 5. Command phrases
     if (/pilih\s*(a|ei)|jawab\s*(a|ei)/.test(normalized)) return 'A'
     if (/pilih\s*b|jawab\s*b/.test(normalized)) return 'B'
     if (/pilih\s*(c|si)|jawab\s*(c|si)/.test(normalized)) return 'C'
@@ -174,9 +172,13 @@ export function VoiceAnswerControl({
   }
 
   const startListening = () => {
-    if (!recognitionRef.current || isListening || !isSupported) return
+    // ✅ FIX: Prevent double start
+    if (!recognitionRef.current || isListening || !isSupported || isStartingRef.current) {
+      return
+    }
 
     try {
+      isStartingRef.current = true // ✅ Set flag BEFORE start
       answerSubmittedRef.current = false
       recognitionRef.current.start()
       setTranscript('')
@@ -184,7 +186,9 @@ export function VoiceAnswerControl({
       setConfidence(0)
     } catch (err: any) {
       console.error('Start listening error:', err)
-      // ✅ Handle "already started" error
+      isStartingRef.current = false // ✅ Reset on error
+      
+      // ✅ Only show error if not "already started"
       if (!err.message?.includes('already started')) {
         setError(err.message)
       }
@@ -197,12 +201,11 @@ export function VoiceAnswerControl({
     try {
       recognitionRef.current.stop()
       setIsListening(false)
+      isStartingRef.current = false // ✅ Reset flag
     } catch (err) {
       console.error('Stop listening error:', err)
     }
   }
-
-  // ✅ UI STATES
 
   if (!isSupported) {
     return (
@@ -221,7 +224,6 @@ export function VoiceAnswerControl({
   return (
     <Card className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/50 p-4 shadow-lg">
       <div className="space-y-3">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Volume2 className="h-5 w-5 text-purple-300" />
@@ -236,7 +238,6 @@ export function VoiceAnswerControl({
           )}
         </div>
 
-        {/* Instructions */}
         <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-400/30">
           <p className="text-purple-100 text-sm font-medium mb-2">
             🎙️ Say one of these:
@@ -249,7 +250,6 @@ export function VoiceAnswerControl({
           </div>
         </div>
 
-        {/* Live Transcript */}
         {transcript && (
           <div className="bg-black/40 rounded-lg p-3 border border-purple-400/30">
             <div className="flex items-center justify-between mb-1">
@@ -262,7 +262,6 @@ export function VoiceAnswerControl({
           </div>
         )}
 
-        {/* Detected Answer */}
         {detectedAnswer && (
           <div className="bg-green-500/20 border-2 border-green-400 rounded-lg p-4 animate-pulse">
             <div className="text-center">
@@ -275,7 +274,6 @@ export function VoiceAnswerControl({
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="bg-red-500/20 border border-red-400 rounded-lg p-3">
             <p className="text-red-300 text-sm mb-2">{error}</p>
@@ -292,7 +290,6 @@ export function VoiceAnswerControl({
           </div>
         )}
 
-        {/* Manual Control */}
         {!isListening && !detectedAnswer && !error && (
           <Button
             onClick={startListening}
@@ -304,7 +301,6 @@ export function VoiceAnswerControl({
           </Button>
         )}
 
-        {/* Visual Feedback for Listening */}
         {isListening && !detectedAnswer && (
           <div className="flex justify-center gap-1">
             <div className="w-2 h-8 bg-purple-500 rounded animate-pulse" style={{ animationDelay: '0ms' }}></div>

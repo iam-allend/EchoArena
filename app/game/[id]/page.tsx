@@ -681,6 +681,7 @@ async function handleAnswer(selectedAnswer: 'A' | 'B' | 'C' | 'D') {
                 voiceRoomUrl={gameState.room.voice_room_url}
                 isMyTurn={isMyTurn}
                 myUserId={user.id}
+                phase={phase}  // ✅ ADD THIS LINE
               />
             </div>
           </div>
