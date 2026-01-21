@@ -74,36 +74,44 @@ export function VoiceAnswerControl({
     }
 
     recognition.onerror = (event: any) => {
-      console.error('❌ Speech recognition error:', event.error)
-      
-      // ✅ Ignore "aborted" error (happens on manual stop)
-      if (event.error === 'aborted') {
+      // ✅ Ignore benign errors
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        console.log('⚠️ Recognition stopped:', event.error)
         return
       }
       
-      if (event.error === 'no-speech') {
-        setError('No speech detected. Try speaking louder.')
-      } else if (event.error === 'audio-capture') {
+      console.error('❌ Speech recognition error:', event.error)
+      
+      if (event.error === 'audio-capture') {
         setError('Microphone not found. Check permissions.')
       } else if (event.error === 'not-allowed') {
         setError('Microphone access denied. Enable in browser settings.')
+      } else if (event.error === 'network') {
+        setError('Network error. Check your connection.')
       } else {
         setError(`Error: ${event.error}`)
       }
       
       setIsListening(false)
-      isStartingRef.current = false // ✅ Reset flag
+      isStartingRef.current = false
     }
 
     recognition.onend = () => {
       console.log('🛑 Voice recognition ended')
       setIsListening(false)
-      isStartingRef.current = false // ✅ Reset flag
+      isStartingRef.current = false
       
-      // ✅ Auto-restart only if conditions met
-      if (isActive && !answerSubmittedRef.current && !error && !disabled) {
+      // ✅ ONLY restart if all conditions met AND no errors
+      const shouldRestart = isActive && !answerSubmittedRef.current && !disabled && !error
+      
+      if (shouldRestart) {
         console.log('🔄 Auto-restarting recognition...')
-        setTimeout(() => startListening(), 300) // ✅ Longer delay
+        // ✅ Longer delay to prevent rapid restarts
+        setTimeout(() => {
+          if (isActive && !answerSubmittedRef.current) {
+            startListening()
+          }
+        }, 500)
       }
     }
 
