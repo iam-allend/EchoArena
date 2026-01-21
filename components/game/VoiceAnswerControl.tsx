@@ -7,7 +7,7 @@ import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react'
 
 interface VoiceAnswerControlProps {
   onAnswer: (answer: 'A' | 'B' | 'C' | 'D') => void
-  isActive: boolean // True during answering phase
+  isActive: boolean
   disabled?: boolean
 }
 
@@ -21,62 +21,84 @@ export function VoiceAnswerControl({
   const [detectedAnswer, setDetectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSupported, setIsSupported] = useState(true)
+  const [confidence, setConfidence] = useState<number>(0)
 
   const recognitionRef = useRef<any>(null)
+  const answerSubmittedRef = useRef(false) // Prevent double submission
 
   useEffect(() => {
-    // Check browser support
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       setIsSupported(false)
       console.warn('⚠️ Speech Recognition not supported')
       return
     }
 
-    // Initialize Speech Recognition
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
     const recognition = new SpeechRecognition()
 
-    recognition.continuous = false // Stop after one result
-    recognition.interimResults = true // Show partial results
-    recognition.lang = 'id-ID' // Indonesian language
-    recognition.maxAlternatives = 3
+    recognition.continuous = true // ✅ Keep listening
+    recognition.interimResults = true
+    recognition.lang = 'id-ID'
+    recognition.maxAlternatives = 5 // ✅ Get more alternatives
 
     recognition.onstart = () => {
       console.log('🎤 Voice recognition started')
       setIsListening(true)
       setError(null)
+      answerSubmittedRef.current = false
     }
 
     recognition.onresult = (event: any) => {
-      const current = event.resultIndex
-      const transcript = event.results[current][0].transcript.toLowerCase().trim()
+      const results = event.results[event.results.length - 1]
+      const transcript = results[0].transcript.toLowerCase().trim()
+      const confidence = results[0].confidence
       
-      console.log('📝 Transcript:', transcript)
+      console.log('📝 Transcript:', transcript, '| Confidence:', confidence)
       setTranscript(transcript)
+      setConfidence(confidence)
 
-      // Parse answer from transcript
+      // ✅ Parse answer with improved logic
       const answer = parseAnswer(transcript)
-      if (answer) {
-        console.log('✅ Detected answer:', answer)
+      
+      if (answer && !answerSubmittedRef.current) {
+        console.log('✅ Detected answer:', answer, '| Confidence:', confidence)
         setDetectedAnswer(answer)
+        answerSubmittedRef.current = true
         
-        // Auto-submit after detection
+        // ✅ Visual feedback + submit
         setTimeout(() => {
           onAnswer(answer)
           stopListening()
-        }, 500)
+        }, 800) // Slightly longer delay for user to see
       }
     }
 
     recognition.onerror = (event: any) => {
       console.error('❌ Speech recognition error:', event.error)
-      setError(`Error: ${event.error}`)
+      
+      // ✅ Better error handling
+      if (event.error === 'no-speech') {
+        setError('No speech detected. Try speaking louder.')
+      } else if (event.error === 'audio-capture') {
+        setError('Microphone not found. Check permissions.')
+      } else if (event.error === 'not-allowed') {
+        setError('Microphone access denied. Enable in browser settings.')
+      } else {
+        setError(`Error: ${event.error}`)
+      }
+      
       setIsListening(false)
     }
 
     recognition.onend = () => {
       console.log('🛑 Voice recognition ended')
       setIsListening(false)
+      
+      // ✅ Auto-restart if still active and no answer yet
+      if (isActive && !answerSubmittedRef.current && !error) {
+        console.log('🔄 Auto-restarting recognition...')
+        setTimeout(() => startListening(), 100)
+      }
     }
 
     recognitionRef.current = recognition
@@ -86,44 +108,72 @@ export function VoiceAnswerControl({
         recognitionRef.current.abort()
       }
     }
-  }, [])
+  }, [isActive, error])
 
-  // Auto-start listening when answering phase begins
+  // Auto-start when active
   useEffect(() => {
-    if (isActive && !disabled && isSupported) {
+    if (isActive && !disabled && isSupported && !isListening) {
       startListening()
-    } else {
+    } else if (!isActive && isListening) {
       stopListening()
     }
 
     return () => {
-      stopListening()
+      if (!isActive) {
+        stopListening()
+      }
     }
   }, [isActive, disabled, isSupported])
 
+  // ✅ IMPROVED PARSING LOGIC
   const parseAnswer = (text: string): 'A' | 'B' | 'C' | 'D' | null => {
-    // Remove common words
-    const cleaned = text
-      .replace(/pilih|jawab|saya|adalah|yang|itu|ini/gi, '')
+    // Normalize text
+    const normalized = text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
       .trim()
 
-    // Direct letter detection
-    if (/\ba\b/.test(cleaned)) return 'A'
-    if (/\bb\b/.test(cleaned)) return 'B'
-    if (/\bc\b/.test(cleaned)) return 'C'
-    if (/\bd\b/.test(cleaned)) return 'D'
+    console.log('🔍 Parsing:', normalized)
 
-    // Phonetic alphabet
-    if (/alpha|alfa/i.test(cleaned)) return 'A'
-    if (/bravo|beta/i.test(cleaned)) return 'B'
-    if (/charlie|charly/i.test(cleaned)) return 'C'
-    if (/delta/i.test(cleaned)) return 'D'
+    // ✅ 1. EXACT MATCHES (highest priority)
+    if (/^a+$/.test(normalized)) return 'A' // "a", "aa", "aaa"
+    if (/^b+$/.test(normalized)) return 'B'
+    if (/^c+$/.test(normalized)) return 'C'
+    if (/^d+$/.test(normalized)) return 'D'
 
-    // Numbers
-    if (/\b1\b|satu|pertama/i.test(cleaned)) return 'A'
-    if (/\b2\b|dua|kedua/i.test(cleaned)) return 'B'
-    if (/\b3\b|tiga|ketiga/i.test(cleaned)) return 'C'
-    if (/\b4\b|empat|keempat/i.test(cleaned)) return 'D'
+    // ✅ 2. INDONESIAN LETTER NAMES
+    if (/\b(a|aa|aaa|ah|ei)\b/.test(normalized)) return 'A'
+    if (/\b(be|bee|bi|beh)\b/.test(normalized)) return 'B'
+    if (/\b(ce|cee|ci|seh|se)\b/.test(normalized)) return 'C'
+    if (/\b(de|dee|di|deh)\b/.test(normalized)) return 'D'
+
+    // ✅ 3. PHONETIC VARIATIONS
+    if (/si+/.test(normalized) || /cy/.test(normalized)) return 'C' // "si", "sii", "cy"
+    if (/da+/.test(normalized) || /di+/.test(normalized)) return 'D' // "da", "daa", "di"
+    
+    // ✅ 4. COMMAND PHRASES (Indonesian)
+    if (/pilih\s*a|jawab\s*a|opsi\s*a/.test(normalized)) return 'A'
+    if (/pilih\s*b|jawab\s*b|opsi\s*b/.test(normalized)) return 'B'
+    if (/pilih\s*c|jawab\s*c|opsi\s*c|pilih\s*si/.test(normalized)) return 'C'
+    if (/pilih\s*d|jawab\s*d|opsi\s*d|pilih\s*di/.test(normalized)) return 'D'
+
+    // ✅ 5. NUMBERS (Indonesian & English)
+    if (/\b(1|satu|one|pertama|first)\b/.test(normalized)) return 'A'
+    if (/\b(2|dua|two|kedua|second)\b/.test(normalized)) return 'B'
+    if (/\b(3|tiga|three|ketiga|third)\b/.test(normalized)) return 'C'
+    if (/\b(4|empat|four|keempat|fourth)\b/.test(normalized)) return 'D'
+
+    // ✅ 6. PHONETIC ALPHABET (NATO + common variations)
+    if (/alpha|alfa/.test(normalized)) return 'A'
+    if (/bravo|beta/.test(normalized)) return 'B'
+    if (/charlie|charly|charli/.test(normalized)) return 'C'
+    if (/delta/.test(normalized)) return 'D'
+
+    // ✅ 7. SINGLE LETTER IN TEXT (last resort)
+    if (normalized.includes('a') && !normalized.includes('b') && !normalized.includes('c') && !normalized.includes('d')) return 'A'
+    if (normalized.includes('b') && !normalized.includes('a') && !normalized.includes('c') && !normalized.includes('d')) return 'B'
+    if (normalized.includes('c') && !normalized.includes('a') && !normalized.includes('b') && !normalized.includes('d')) return 'C'
+    if (normalized.includes('d') && !normalized.includes('a') && !normalized.includes('b') && !normalized.includes('c')) return 'D'
 
     return null
   }
@@ -132,102 +182,142 @@ export function VoiceAnswerControl({
     if (!recognitionRef.current || isListening || !isSupported) return
 
     try {
+      answerSubmittedRef.current = false
       recognitionRef.current.start()
       setTranscript('')
       setDetectedAnswer(null)
-    } catch (err) {
+      setConfidence(0)
+    } catch (err: any) {
       console.error('Start listening error:', err)
+      // ✅ Handle "already started" error
+      if (!err.message?.includes('already started')) {
+        setError(err.message)
+      }
     }
   }
 
   const stopListening = () => {
-    if (!recognitionRef.current || !isListening) return
+    if (!recognitionRef.current) return
 
     try {
       recognitionRef.current.stop()
+      setIsListening(false)
     } catch (err) {
       console.error('Stop listening error:', err)
     }
   }
 
+  // ✅ UI STATES
+
   if (!isSupported) {
     return (
       <Card className="bg-orange-500/20 border-orange-400 p-3">
         <p className="text-orange-300 text-sm text-center">
-          ⚠️ Voice answer not supported in this browser
+          ⚠️ Voice answer not supported in this browser. Use Chrome or Edge.
         </p>
       </Card>
     )
   }
 
   if (!isActive) {
-    return null // Don't show when not in answering phase
+    return null
   }
 
   return (
-    <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
+    <Card className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/50 p-4 shadow-lg">
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5 text-purple-400" />
-            <span className="text-white font-semibold">Voice Answer</span>
+            <Volume2 className="h-5 w-5 text-purple-300" />
+            <span className="text-white font-bold">Voice Answer</span>
           </div>
           
           {isListening && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-red-500/20 px-3 py-1 rounded-full border border-red-400">
               <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-red-400 text-sm">Listening...</span>
+              <span className="text-red-300 text-sm font-semibold">Listening</span>
             </div>
           )}
         </div>
 
         {/* Instructions */}
-        <p className="text-purple-200 text-sm">
-          🎙️ Say: "A", "B", "C", or "D" to answer
-        </p>
+        <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-400/30">
+          <p className="text-purple-100 text-sm font-medium mb-2">
+            🎙️ Say one of these:
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="text-purple-200">• "A" / "Ei" / "Satu"</div>
+            <div className="text-purple-200">• "B" / "Bi" / "Dua"</div>
+            <div className="text-purple-200">• "C" / "Si" / "Tiga"</div>
+            <div className="text-purple-200">• "D" / "Di" / "Empat"</div>
+          </div>
+        </div>
 
         {/* Live Transcript */}
         {transcript && (
-          <div className="bg-black/30 rounded-lg p-3">
-            <p className="text-xs text-purple-300 mb-1">Transcript:</p>
-            <p className="text-white font-mono">{transcript}</p>
+          <div className="bg-black/40 rounded-lg p-3 border border-purple-400/30">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-purple-300 font-semibold">Live Transcript:</p>
+              <span className="text-xs text-purple-400">
+                {Math.round(confidence * 100)}% confident
+              </span>
+            </div>
+            <p className="text-white font-mono text-sm break-words">{transcript}</p>
           </div>
         )}
 
         {/* Detected Answer */}
         {detectedAnswer && (
-          <div className="bg-green-500/20 border border-green-400 rounded-lg p-3 animate-pulse">
-            <p className="text-green-300 font-bold text-center">
-              ✓ Detected: {detectedAnswer}
-            </p>
+          <div className="bg-green-500/20 border-2 border-green-400 rounded-lg p-4 animate-pulse">
+            <div className="text-center">
+              <div className="text-4xl mb-2">✓</div>
+              <p className="text-green-300 font-bold text-xl">
+                Detected: Option {detectedAnswer}
+              </p>
+              <p className="text-green-400 text-sm mt-1">Submitting answer...</p>
+            </div>
           </div>
         )}
 
         {/* Error */}
         {error && (
           <div className="bg-red-500/20 border border-red-400 rounded-lg p-3">
-            <p className="text-red-300 text-sm">{error}</p>
+            <p className="text-red-300 text-sm mb-2">{error}</p>
             <Button
-              onClick={startListening}
+              onClick={() => {
+                setError(null)
+                startListening()
+              }}
               size="sm"
-              className="mt-2 w-full"
+              className="w-full bg-red-500 hover:bg-red-600"
             >
               Retry
             </Button>
           </div>
         )}
 
-        {/* Manual Control (optional) */}
-        {!isListening && !detectedAnswer && (
+        {/* Manual Control */}
+        {!isListening && !detectedAnswer && !error && (
           <Button
             onClick={startListening}
             disabled={disabled}
-            className="w-full bg-purple-500 hover:bg-purple-600"
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 font-semibold"
           >
             <Mic className="mr-2 h-4 w-4" />
             Start Voice Answer
           </Button>
+        )}
+
+        {/* Visual Feedback for Listening */}
+        {isListening && !detectedAnswer && (
+          <div className="flex justify-center gap-1">
+            <div className="w-2 h-8 bg-purple-500 rounded animate-pulse" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-12 bg-purple-400 rounded animate-pulse" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-10 bg-purple-500 rounded animate-pulse" style={{ animationDelay: '300ms' }}></div>
+            <div className="w-2 h-14 bg-purple-400 rounded animate-pulse" style={{ animationDelay: '450ms' }}></div>
+            <div className="w-2 h-8 bg-purple-500 rounded animate-pulse" style={{ animationDelay: '600ms' }}></div>
+          </div>
         )}
       </div>
     </Card>
