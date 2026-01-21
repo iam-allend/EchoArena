@@ -37,22 +37,19 @@ export function VoiceControl({
     }
   }, [])
 
-  // ✅ FORCE MUTE/UNMUTE based on turn AND phase
+  // ✅ AUTO MUTE/UNMUTE - Only control MY microphone
   useEffect(() => {
     if (isConnected) {
       const canSpeak = isMyTurn && phase === 'answering'
       
-      if (canSpeak) {
-        // Unmute only during answering phase
-        setIsMuted(false)
-        AgoraManager.setMuted(false)
-        console.log('🎤 Auto-unmuted (answering phase)')
-      } else {
-        // Force mute in all other cases
-        setIsMuted(true)
-        AgoraManager.setMuted(true)
-        console.log('🔇 Force muted')
-      }
+      // Always mute my mic when not my turn
+      // BUT still able to HEAR others via Agora audio playback
+      const shouldMute = !canSpeak
+      
+      setIsMuted(shouldMute)
+      AgoraManager.setMuted(shouldMute)
+      
+      console.log(canSpeak ? '🎤 Auto-unmuted (can speak)' : '🔇 Auto-muted (listening only)')
     }
   }, [isMyTurn, isConnected, phase])
 

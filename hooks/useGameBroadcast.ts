@@ -8,6 +8,7 @@ export type GameEvent =
   | { type: 'QUESTION_LOADED'; question: any; stageNumber: number }
   | { type: 'TURN_CHANGED'; turn: any; stageNumber: number }
   | { type: 'ANSWER_SUBMITTED'; userId: string; stageNumber: number }
+  | { type: 'PLAYER_ELIMINATED'; userId: string; username: string } // ✅ NEW
   | { type: 'STAGE_COMPLETE'; nextStage: number }
   | { type: 'GAME_FINISHED' }
 

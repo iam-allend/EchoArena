@@ -125,55 +125,50 @@ export function VoiceAnswerControl({
     }
   }, [isActive, disabled, isSupported])
 
-  // ✅ IMPROVED PARSING LOGIC
+  // ✅ IMPROVED PARSING - Better B/D differentiation
   const parseAnswer = (text: string): 'A' | 'B' | 'C' | 'D' | null => {
-    // Normalize text
     const normalized = text
       .toLowerCase()
-      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/[^\w\s]/g, '')
       .trim()
 
     console.log('🔍 Parsing:', normalized)
 
-    // ✅ 1. EXACT MATCHES (highest priority)
-    if (/^a+$/.test(normalized)) return 'A' // "a", "aa", "aaa"
+    // 1. EXACT single letter (strict)
+    if (/^a+$/.test(normalized)) return 'A'
     if (/^b+$/.test(normalized)) return 'B'
     if (/^c+$/.test(normalized)) return 'C'
     if (/^d+$/.test(normalized)) return 'D'
 
-    // ✅ 2. INDONESIAN LETTER NAMES
-    if (/\b(a|aa|aaa|ah|ei)\b/.test(normalized)) return 'A'
-    if (/\b(be|bee|bi|beh)\b/.test(normalized)) return 'B'
-    if (/\b(ce|cee|ci|seh|se)\b/.test(normalized)) return 'C'
-    if (/\b(de|dee|di|deh)\b/.test(normalized)) return 'D'
-
-    // ✅ 3. PHONETIC VARIATIONS
-    if (/si+/.test(normalized) || /cy/.test(normalized)) return 'C' // "si", "sii", "cy"
-    if (/da+/.test(normalized) || /di+/.test(normalized)) return 'D' // "da", "daa", "di"
+    // 2. INDONESIAN phonetics (specific patterns)
+    if (/\b(ei|ey|ay|eh)\b/.test(normalized)) return 'A'
     
-    // ✅ 4. COMMAND PHRASES (Indonesian)
-    if (/pilih\s*a|jawab\s*a|opsi\s*a/.test(normalized)) return 'A'
-    if (/pilih\s*b|jawab\s*b|opsi\s*b/.test(normalized)) return 'B'
-    if (/pilih\s*c|jawab\s*c|opsi\s*c|pilih\s*si/.test(normalized)) return 'C'
-    if (/pilih\s*d|jawab\s*d|opsi\s*d|pilih\s*di/.test(normalized)) return 'D'
+    // B patterns - avoid "pi/p" confusion
+    if (/\b(bi|bee|beh|be)\b/.test(normalized) && !/(pi|p|ti|ci|si|di)/i.test(normalized)) return 'B'
+    
+    // C patterns - "si/see/ce"
+    if (/\b(si|see|ce|cee|seh|se)\b/.test(normalized)) return 'C'
+    
+    // D patterns - avoid "ti/t" confusion  
+    if (/\b(di|dee|deh|de)\b/.test(normalized) && !/(ti|t|si|ci|bi)/i.test(normalized)) return 'D'
 
-    // ✅ 5. NUMBERS (Indonesian & English)
-    if (/\b(1|satu|one|pertama|first)\b/.test(normalized)) return 'A'
-    if (/\b(2|dua|two|kedua|second)\b/.test(normalized)) return 'B'
-    if (/\b(3|tiga|three|ketiga|third)\b/.test(normalized)) return 'C'
-    if (/\b(4|empat|four|keempat|fourth)\b/.test(normalized)) return 'D'
+    // 3. NUMBERS (safest method)
+    if (/\b(1|satu|one)\b/.test(normalized)) return 'A'
+    if (/\b(2|dua|two)\b/.test(normalized)) return 'B'
+    if (/\b(3|tiga|three)\b/.test(normalized)) return 'C'
+    if (/\b(4|empat|four)\b/.test(normalized)) return 'D'
 
-    // ✅ 6. PHONETIC ALPHABET (NATO + common variations)
+    // 4. NATO alphabet
     if (/alpha|alfa/.test(normalized)) return 'A'
-    if (/bravo|beta/.test(normalized)) return 'B'
-    if (/charlie|charly|charli/.test(normalized)) return 'C'
+    if (/bravo/.test(normalized)) return 'B'
+    if (/charlie|charly/.test(normalized)) return 'C'
     if (/delta/.test(normalized)) return 'D'
 
-    // ✅ 7. SINGLE LETTER IN TEXT (last resort)
-    if (normalized.includes('a') && !normalized.includes('b') && !normalized.includes('c') && !normalized.includes('d')) return 'A'
-    if (normalized.includes('b') && !normalized.includes('a') && !normalized.includes('c') && !normalized.includes('d')) return 'B'
-    if (normalized.includes('c') && !normalized.includes('a') && !normalized.includes('b') && !normalized.includes('d')) return 'C'
-    if (normalized.includes('d') && !normalized.includes('a') && !normalized.includes('b') && !normalized.includes('c')) return 'D'
+    // 5. COMMAND phrases
+    if (/pilih\s*(a|ei)|jawab\s*(a|ei)/.test(normalized)) return 'A'
+    if (/pilih\s*b|jawab\s*b/.test(normalized)) return 'B'
+    if (/pilih\s*(c|si)|jawab\s*(c|si)/.test(normalized)) return 'C'
+    if (/pilih\s*(d|di)|jawab\s*(d|di)/.test(normalized)) return 'D'
 
     return null
   }

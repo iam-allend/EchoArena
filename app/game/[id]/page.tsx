@@ -119,6 +119,18 @@ const handleGameEvent = useCallback(async (event: GameEvent) => {
       }
       break
 
+    case 'PLAYER_ELIMINATED':
+      console.log('💀 Player eliminated:', event.username)
+      
+      // Force refresh state to show elimination banner
+      const elimResp = await fetch(`/api/game/${roomId}/state`)
+      const elimData = await elimResp.json()
+      
+      if (elimData.success) {
+        setGameState(elimData.game)
+      }
+      break
+
     case 'STAGE_COMPLETE':
       console.log('📈 Stage complete, moving to:', event.nextStage)
       

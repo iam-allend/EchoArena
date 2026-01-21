@@ -73,6 +73,23 @@ export async function POST(
     if (wasEliminated) {
       console.log('💀 Player eliminated!')
       
+      // ✅ BROADCAST elimination immediately
+      const elimChannel = supabase.channel(`room:${roomId}:elim`)
+      await elimChannel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await elimChannel.send({
+            type: 'broadcast',
+            event: 'game-event',
+            payload: {
+              type: 'PLAYER_ELIMINATED',
+              userId,
+              username: participant?.user?.username || 'Player'
+            }
+          })
+          setTimeout(() => supabase.removeChannel(elimChannel), 1000)
+        }
+      })
+      
       // ✅ Check if game is over (only 1 player left)
       const { data: gameOver } = await supabase
         .rpc('check_game_over', { p_room_id: roomId })
@@ -85,7 +102,6 @@ export async function POST(
           .update({ status: 'finished' })
           .eq('id', roomId)
 
-        // Broadcast game finished
         const finishChannel = supabase.channel(`room:${roomId}:finish`)
         await finishChannel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
@@ -102,7 +118,7 @@ export async function POST(
           success: true,
           result,
           stageComplete: false,
-          gameFinished: true, // ✅ NEW
+          gameFinished: true,
           eliminated: true
         })
       }
