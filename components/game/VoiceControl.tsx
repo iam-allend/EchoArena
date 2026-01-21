@@ -9,9 +9,16 @@ interface VoiceControlProps {
   voiceRoomUrl: string | null
   isMyTurn: boolean
   myUserId: string
+  phase?: 'reading' | 'answering' | 'waiting'
 }
 
-export function VoiceControl({ voiceRoomUrl, isMyTurn, myUserId }: VoiceControlProps) {
+export function VoiceControl({ 
+  voiceRoomUrl, 
+  isMyTurn, 
+  myUserId, 
+  phase = 'waiting'  
+
+}: VoiceControlProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
@@ -35,15 +42,18 @@ export function VoiceControl({ voiceRoomUrl, isMyTurn, myUserId }: VoiceControlP
   // Auto mute/unmute based on turn
   useEffect(() => {
     if (isConnected) {
-      if (isMyTurn) {
+      // Unmute ONLY during answering phase
+      if (isMyTurn && phase === 'answering') {
         setIsMuted(false)
         AgoraManager.setMuted(false)
+        console.log('🎤 Auto-unmuted (answering phase)')
       } else {
         setIsMuted(true)
         AgoraManager.setMuted(true)
+        console.log('🔇 Auto-muted')
       }
     }
-  }, [isMyTurn, isConnected])
+  }, [isMyTurn, isConnected, phase]) // ✅ ADD phase dependency
 
   async function connectToVoice() {
     if (!voiceRoomUrl) return

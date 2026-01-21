@@ -26,11 +26,11 @@
 ## Week 2: Voice & Features (Jan 15-21)
 
 ### Day 8-10: Voice Integration || CANCEL KITA PAKAI AGORA YG BEBAS
-- [ ] Daily.co setup
-- [ ] Voice room creation
-- [ ] Mic permissions
-- [ ] Mute/unmute logic
-- [ ] Turn-based audio control
+- [✅] Daily.co setup
+- [✅] Voice room creation
+- [✅] Mic permissions
+- [✅] Mute/unmute logic
+- [✅] Turn-based audio control
 
 ### Day 11-12: Speech Recognition
 - [ ] Web Speech API setup

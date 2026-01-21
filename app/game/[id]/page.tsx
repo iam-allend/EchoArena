@@ -13,6 +13,8 @@ import { QuestionDisplay } from '@/components/game/QuestionDisplay'
 import { GameHeader } from '@/components/game/GameHeader'
 import { VoiceControl } from '@/components/game/VoiceControl'
 
+import { MusicControl } from '@/components/ui/MusicControl'
+
 type GamePhase = 'loading' | 'reading' | 'answering' | 'result' | 'waiting' | 'stage_transition' | 'finished'
 
 interface Question {
@@ -633,6 +635,7 @@ useEffect(() => {
                 isMyTurn={isMyTurn && !hasAnswered.current}
                 showResult={phase === 'result' ? answerResult : undefined}
                 disabled={phase === 'reading' || isSubmitting || !isMyTurn || hasAnswered.current}
+                phase={phase} // ✅ ADD THIS LINE
               />
             ) : (
               <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-12 text-center">
@@ -690,6 +693,9 @@ useEffect(() => {
           </Button>
         </Card>
       </div>
+
+      <MusicControl trackUrl="/audio/home/upbeat-game-menu.mp3" />
+      
     </div>
     
   )

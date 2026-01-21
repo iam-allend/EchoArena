@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Copy, Check, Users, Crown, LogOut } from 'lucide-react'
 
+import { MusicControl } from '@/components/ui/MusicControl'
+
 interface Participant {
   id: string
   user_id: string
@@ -424,6 +426,11 @@ export default function RoomLobbyPage() {
           </div>
         )}
       </div>
+
+          <MusicControl trackUrl="/audio/dashboard/dashboard-music-1.mp3" />
+      
     </div>
+
+    
   )
 }

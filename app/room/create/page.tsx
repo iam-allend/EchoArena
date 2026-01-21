@@ -79,12 +79,16 @@ export default function CreateRoomPage() {
         <div className="max-w-2xl mx-auto">
           {/* Back Button */}
           <Button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => {
+              router.push('/dashboard')
+              router.refresh()
+            }}
             className="mb-6 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
+
 
           <Card className="border-0 bg-gray-900/80 backdrop-blur-xl shadow-2xl shadow-purple-500/20">
             <CardHeader className="text-center pb-6">

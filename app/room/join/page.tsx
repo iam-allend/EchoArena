@@ -84,7 +84,10 @@ export default function JoinRoomPage() {
         <div className="max-w-2xl mx-auto">
           {/* Back Button */}
           <Button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => {
+              router.push('/dashboard')
+              router.refresh()
+            }}
             className="mb-6 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

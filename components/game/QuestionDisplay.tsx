@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { VoiceAnswerControl } from './VoiceAnswerControl' // ✅ ADD THIS
 
 interface Question {
   id: number
@@ -25,6 +26,7 @@ interface QuestionDisplayProps {
     isCorrect: boolean
   }
   disabled?: boolean
+  phase?: 'reading' | 'answering' // ✅ ADD THIS
 }
 
 export function QuestionDisplay({ 
@@ -32,7 +34,8 @@ export function QuestionDisplay({
   onAnswer, 
   isMyTurn,
   showResult,
-  disabled = false
+  disabled = false,
+  phase = 'answering' // ✅ ADD THIS
 }: QuestionDisplayProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null)
 
@@ -79,76 +82,87 @@ export function QuestionDisplay({
   }
 
   return (
-    <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-6">
-      {/* Difficulty Badge */}
-      <div className="flex justify-between items-start mb-4">
-        <span className={`px-3 py-1 rounded text-sm font-semibold text-white ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
-        </span>
-        {!isMyTurn && !showResult && (
-          <span className="text-yellow-400 text-sm font-semibold animate-pulse">
-            ⏳ Wait for your turn...
-          </span>
-        )}
-      </div>
-
-      {/* Question Text */}
-      <h2 className="text-2xl font-bold text-white mb-6">
-        {question.question_text}
-      </h2>
-
-      {/* Answer Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {options.map((option) => (
-          <button
-            key={option.letter}
-            onClick={() => handleSelect(option.letter)}
-            disabled={!isMyTurn || disabled || !!showResult}
-            className={`
-              relative p-4 rounded-lg border-2 transition-all duration-200
-              text-left
-              ${getOptionStyle(option.letter)}
-              ${(!isMyTurn || disabled || showResult) ? 'cursor-not-allowed' : 'cursor-pointer'}
-            `}
-          >
-            {/* Letter Badge */}
-            <div className="flex items-start gap-3">
-              <div className={`
-                flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold
-                ${selectedAnswer === option.letter || showResult?.correctAnswer === option.letter
-                  ? 'bg-white text-purple-900' 
-                  : 'bg-purple-500 text-white'}
-              `}>
-                {option.letter}
-              </div>
-              
-              {/* Option Text */}
-              <p className="text-white font-medium flex-1 mt-1">
-                {option.text}
-              </p>
-
-              {/* Result Icons */}
-              {showResult && (
-                <>
-                  {option.letter === showResult.correctAnswer && (
-                    <CheckCircle className="h-6 w-6 text-green-400 flex-shrink-0" />
-                  )}
-                  {option.letter === showResult.selectedAnswer && !showResult.isCorrect && (
-                    <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
-                  )}
-                </>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Waiting message */}
-      {!isMyTurn && !showResult && (
-        <p className="text-center text-purple-200 mt-4">
-          🎤 Another player is answering...
-        </p>
+    <div className="space-y-4"> {/* ✅ WRAP IN DIV */}
+      {/* ✅ ADD VOICE ANSWER CONTROL */}
+      {isMyTurn && phase === 'answering' && !showResult && (
+        <VoiceAnswerControl
+          onAnswer={handleSelect}
+          isActive={true}
+          disabled={disabled}
+        />
       )}
-    </Card>
+
+      <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-6">
+        {/* Difficulty Badge */}
+        <div className="flex justify-between items-start mb-4">
+          <span className={`px-3 py-1 rounded text-sm font-semibold text-white ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </span>
+          {!isMyTurn && !showResult && (
+            <span className="text-yellow-400 text-sm font-semibold animate-pulse">
+              ⏳ Wait for your turn...
+            </span>
+          )}
+        </div>
+
+        {/* Question Text */}
+        <h2 className="text-2xl font-bold text-white mb-6">
+          {question.question_text}
+        </h2>
+
+        {/* Answer Options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {options.map((option) => (
+            <button
+              key={option.letter}
+              onClick={() => handleSelect(option.letter)}
+              disabled={!isMyTurn || disabled || !!showResult}
+              className={`
+                relative p-4 rounded-lg border-2 transition-all duration-200
+                text-left
+                ${getOptionStyle(option.letter)}
+                ${(!isMyTurn || disabled || showResult) ? 'cursor-not-allowed' : 'cursor-pointer'}
+              `}
+            >
+              {/* Letter Badge */}
+              <div className="flex items-start gap-3">
+                <div className={`
+                  flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold
+                  ${selectedAnswer === option.letter || showResult?.correctAnswer === option.letter
+                    ? 'bg-white text-purple-900' 
+                    : 'bg-purple-500 text-white'}
+                `}>
+                  {option.letter}
+                </div>
+                
+                {/* Option Text */}
+                <p className="text-white font-medium flex-1 mt-1">
+                  {option.text}
+                </p>
+
+                {/* Result Icons */}
+                {showResult && (
+                  <>
+                    {option.letter === showResult.correctAnswer && (
+                      <CheckCircle className="h-6 w-6 text-green-400 flex-shrink-0" />
+                    )}
+                    {option.letter === showResult.selectedAnswer && !showResult.isCorrect && (
+                      <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
+                    )}
+                  </>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Waiting message */}
+        {!isMyTurn && !showResult && (
+          <p className="text-center text-purple-200 mt-4">
+            🎤 Another player is answering...
+          </p>
+        )}
+      </Card>
+    </div>
   )
 }

@@ -1,29 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/ui/card'
 import { Clock } from 'lucide-react'
 
 interface TimerProps {
-  duration: number // in seconds
+  duration: number // seconds
   onComplete: () => void
-  isPaused?: boolean
   label?: string
 }
 
-export function Timer({ duration, onComplete, isPaused = false, label }: TimerProps) {
+export function Timer({ duration, onComplete, label = 'Time Remaining' }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration)
 
   useEffect(() => {
     setTimeLeft(duration)
-  }, [duration])
-
-  useEffect(() => {
-    if (isPaused) return
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
+          onComplete()
           return 0
         }
         return prev - 1
@@ -31,46 +28,38 @@ export function Timer({ duration, onComplete, isPaused = false, label }: TimerPr
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isPaused])
-
-  // ✅ FIX: Call onComplete in separate useEffect
-  useEffect(() => {
-    if (timeLeft === 0 && !isPaused) {
-      onComplete()
-    }
-  }, [timeLeft, isPaused, onComplete])
+  }, [duration, onComplete])
 
   const percentage = (timeLeft / duration) * 100
-  const isLow = percentage < 30
-  const isCritical = percentage < 10
+  const isUrgent = timeLeft <= 3
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+    <Card className={`p-4 ${
+      isUrgent 
+        ? 'bg-red-500/20 border-red-400 animate-pulse' 
+        : 'bg-white/10 border-white/20'
+    }`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-white" />
-          <span className="text-white font-semibold">{label || 'Time Left'}</span>
+          <Clock className={`h-5 w-5 ${isUrgent ? 'text-red-400' : 'text-purple-400'}`} />
+          <span className="text-white font-semibold">{label}</span>
         </div>
         <span className={`text-2xl font-bold ${
-          isCritical ? 'text-red-400 animate-pulse' : 
-          isLow ? 'text-yellow-400' : 
-          'text-white'
+          isUrgent ? 'text-red-400' : 'text-white'
         }`}>
           {timeLeft}s
         </span>
       </div>
-      
-      {/* Progress bar */}
-      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+
+      {/* Progress Bar */}
+      <div className="w-full bg-black/30 rounded-full h-2 overflow-hidden">
         <div
           className={`h-full transition-all duration-1000 ${
-            isCritical ? 'bg-red-500' : 
-            isLow ? 'bg-yellow-500' : 
-            'bg-green-500'
+            isUrgent ? 'bg-red-500' : 'bg-purple-500'
           }`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-    </div>
+    </Card>
   )
 }
