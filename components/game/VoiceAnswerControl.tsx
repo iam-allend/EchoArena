@@ -25,7 +25,8 @@ export function VoiceAnswerControl({
 
   const recognitionRef = useRef<any>(null)
   const answerSubmittedRef = useRef(false)
-  const isStartingRef = useRef(false) // ✅ NEW: Prevent race condition
+  const isStartingRef = useRef(false)
+  const abortCountRef = useRef(0) // ✅ NEW: Track abort attempts
 
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -47,7 +48,8 @@ export function VoiceAnswerControl({
       setIsListening(true)
       setError(null)
       answerSubmittedRef.current = false
-      isStartingRef.current = false // ✅ Reset flag
+      isStartingRef.current = false
+      abortCountRef.current = 0 // ✅ Reset counter on success
     }
 
     recognition.onresult = (event: any) => {
@@ -74,9 +76,25 @@ export function VoiceAnswerControl({
     }
 
     recognition.onerror = (event: any) => {
-      // ✅ Ignore benign errors
-      if (event.error === 'aborted' || event.error === 'no-speech') {
-        console.log('⚠️ Recognition stopped:', event.error)
+      // ✅ Track aborted errors
+      if (event.error === 'aborted') {
+        abortCountRef.current++
+        console.log(`⚠️ Recognition aborted (${abortCountRef.current} times)`)
+        
+        // ✅ Stop trying after 3 aborts
+        if (abortCountRef.current >= 3) {
+          console.log('🛑 Too many aborts - stopping auto-restart')
+          setError('Voice recognition unstable. Please use manual buttons.')
+          setIsListening(false)
+          isStartingRef.current = false
+          return
+        }
+        return
+      }
+      
+      // ✅ Ignore no-speech
+      if (event.error === 'no-speech') {
+        console.log('⚠️ No speech detected')
         return
       }
       
