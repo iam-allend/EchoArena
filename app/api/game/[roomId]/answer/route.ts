@@ -10,86 +10,89 @@ export async function POST(
     const { roomId } = await context.params
     const body = await request.json()
 
-    const { userId, stageNumber, questionId, selectedAnswer, timeTaken, voiceTranscript } = body
+    console.log('✍️ Answer submission for room:', roomId)
+
+    const {
+      userId,
+      stageNumber,
+      questionId,
+      selectedAnswer,
+      timeTaken,
+      voiceTranscript,
+    } = body
 
     if (!userId || !stageNumber || !questionId || !selectedAnswer) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
     }
 
-    // ✅ Submit answer
-    const { data: result, error } = await supabase.rpc('submit_answer', {
-      p_room_id: roomId,
-      p_stage_number: stageNumber,
-      p_user_id: userId,
-      p_question_id: questionId,
-      p_selected_answer: selectedAnswer,
-      p_time_taken: timeTaken,
-      p_voice_transcript: voiceTranscript,
-    })
+    // Submit answer
+    const { data: result, error } = await supabase
+      .rpc('submit_answer', {
+        p_room_id: roomId,
+        p_stage_number: stageNumber,
+        p_user_id: userId,
+        p_question_id: questionId,
+        p_selected_answer: selectedAnswer,
+        p_time_taken: timeTaken,
+        p_voice_transcript: voiceTranscript,
+      })
 
     if (error) throw error
 
-    console.log('✅ Answer result:', result)
+    console.log('✅ Answer submitted:', result)
 
-    // ✅ Delete active question
+    // Delete active question
     await supabase
       .from('active_questions')
       .delete()
       .eq('room_id', roomId)
       .eq('stage_number', stageNumber)
 
-    // ✅ Check elimination (lives = 0)
-    const wasEliminated = result?.lives_remaining === 0
-
-    if (wasEliminated) {
-      console.log('💀 Player eliminated!')
+    // ✅ Check if player eliminated (lives = 0)
+    if (result && typeof result === 'object' && 'lives_remaining' in result) {
+      const typedResult = result as { lives_remaining: number; status: string }
       
-      // ✅ Check if game over (only 1 active player left)
-      const { count } = await supabase
-        .from('room_participants')
-        .select('*', { count: 'exact', head: false })
-        .eq('room_id', roomId)
-        .eq('status', 'active')
+      if (typedResult.lives_remaining === 0) {
+        console.log('💀 Player eliminated:', userId)
 
-      const activePlayers = count || 0
-
-      if (activePlayers <= 1) {
-        console.log('🏁 Game Over - Only 1 player remaining!')
-        
+        // Update participant status
         await supabase
-          .from('game_rooms')
-          .update({ status: 'finished' })
-          .eq('id', roomId)
+          .from('room_participants')
+          .update({ status: 'eliminated' })
+          .eq('room_id', roomId)
+          .eq('user_id', userId)
 
-        // Broadcast game finished
-        await supabase.channel(`room:${roomId}:finish`)
-          .subscribe()
-          .send({
-            type: 'broadcast',
-            event: 'game-event',
-            payload: { type: 'GAME_FINISHED' }
-          })
-
-        return NextResponse.json({
-          success: true,
-          result,
-          gameFinished: true,
-          stageComplete: false
+        // ✅ Broadcast elimination (without username - frontend will get it from gameState)
+        const elimChannel = supabase.channel(`room:${roomId}:elimination`)
+        await elimChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await elimChannel.send({
+              type: 'broadcast',
+              event: 'game-event',
+              payload: {
+                type: 'PLAYER_ELIMINATED',
+                userId
+                // Frontend can get username from gameState.participants
+              }
+            })
+            setTimeout(() => supabase.removeChannel(elimChannel), 1000)
+          }
         })
       }
     }
 
-    // ✅ Check stage complete (only active players)
+    // Check if stage complete
     const { data: stageComplete } = await supabase
       .rpc('is_stage_complete', {
         p_room_id: roomId,
         p_stage_number: stageNumber,
       })
 
-    console.log('📊 Stage complete:', stageComplete)
-
-    // ✅ BROADCAST with retry logic
-    const broadcastChannel = supabase.channel(`room:${roomId}:answers`)
+    // ✅ BROADCAST answer submitted
+    const broadcastChannel = supabase.channel(`room:${roomId}:broadcast`)
     
     await broadcastChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
@@ -100,12 +103,14 @@ export async function POST(
             type: 'ANSWER_SUBMITTED',
             userId,
             stageNumber,
-            wasEliminated, // ✅ Include elimination flag
           },
         })
         
         console.log('📡 Answer broadcasted')
-        setTimeout(() => supabase.removeChannel(broadcastChannel), 2000) // ✅ Longer timeout
+        
+        setTimeout(() => {
+          supabase.removeChannel(broadcastChannel)
+        }, 1000)
       }
     })
 
@@ -113,7 +118,6 @@ export async function POST(
       success: true,
       result,
       stageComplete: stageComplete || false,
-      wasEliminated, // ✅ Return elimination status
     })
   } catch (error: any) {
     console.error('❌ Submit answer error:', error)

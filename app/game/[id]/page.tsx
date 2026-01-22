@@ -381,21 +381,14 @@ export default function GamePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nextStageNumber, setNextStageNumber] = useState<number | null>(null)
 
-  // ✅ Polling mechanism for production
-  const [pollingInterval, setPollingInterval] =
-    useState<NodeJS.Timeout | null>(null)
-
   const hasAnswered = useRef(false)
 
   const handleGameEvent = useCallback(async (event: GameEvent) => {
     console.log('🎯 Event received:', event.type)
 
-    // ✅ ALWAYS refresh gameState on any event
-    await refreshGameState()
-
     switch (event.type) {
       case 'QUESTION_LOADED':
-        console.log('📖 Question loaded')
+        console.log('📖 Question loaded event')
         setCurrentQuestion(event.question)
         hasAnswered.current = false
         
@@ -410,30 +403,43 @@ export default function GamePage() {
           )
           
           if (myParticipant?.status === 'eliminated') {
+            console.log('💀 I am eliminated - spectator mode')
             setPhase('waiting')
             return
           }
           
           const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
-          setPhase(isMyTurn ? 'reading' : 'waiting')
+          
+          if (isMyTurn) {
+            console.log('✅ My turn - start reading')
+            setPhase('reading')
+          } else {
+            console.log('👀 Spectating')
+            setPhase('waiting')
+          }
         }
         break
 
       case 'ANSWER_SUBMITTED':
         console.log('✍️ Answer submitted by:', event.userId)
         
-        // ✅ Already refreshed above, just check turn
-        if (gameState) {
-          const myParticipant = gameState.participants.find(
+        const answerResp = await fetch(`/api/game/${roomId}/state`)
+        const answerData = await answerResp.json()
+        
+        if (answerData.success) {
+          setGameState(answerData.game)
+          
+          const myParticipant = answerData.game.participants.find(
             (p: any) => p.user_id === user?.id
           )
           
           if (myParticipant?.status === 'eliminated') {
+            console.log('💀 Eliminated - stay in spectator mode')
             setPhase('waiting')
             return
           }
           
-          const nowMyTurn = gameState.currentTurn?.user_id === user?.id
+          const nowMyTurn = answerData.game.currentTurn?.user_id === user?.id
           
           if (nowMyTurn && !hasAnswered.current) {
             console.log('🎯 Now my turn!')
@@ -442,14 +448,20 @@ export default function GamePage() {
             
             setTimeout(() => {
               loadQuestion()
-            }, 1000) // ✅ Longer delay for production
+            }, 500)
           }
         }
         break
 
       case 'PLAYER_ELIMINATED':
-        console.log('💀 Player eliminated')
-        // Already refreshed gameState above
+        console.log('💀 Player eliminated:', event.username)
+        
+        const elimResp = await fetch(`/api/game/${roomId}/state`)
+        const elimData = await elimResp.json()
+        
+        if (elimData.success) {
+          setGameState(elimData.game)
+        }
         break
 
       case 'STAGE_COMPLETE':
@@ -464,33 +476,45 @@ export default function GamePage() {
         setTimeout(async () => {
           await refreshGameState()
           
-          if (gameState) {
-            const myParticipant = gameState.participants.find(
+          const stateResp = await fetch(`/api/game/${roomId}/state`)
+          const stateData = await stateResp.json()
+          
+          if (stateData.success) {
+            setGameState(stateData.game)
+            
+            const myParticipant = stateData.game.participants.find(
               (p: any) => p.user_id === user?.id
             )
             
             if (myParticipant?.status === 'eliminated') {
+              console.log('💀 Eliminated - stay in spectator mode')
               setPhase('waiting')
               return
             }
             
-            const isMyTurn = gameState.currentTurn?.user_id === user?.id
+            const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
             
             if (isMyTurn) {
+              console.log('🎯 My turn in new stage - loading question')
               setPhase('waiting')
-              setTimeout(() => loadQuestion(), 1000)
+              
+              setTimeout(() => {
+                loadQuestion()
+              }, 500)
             } else {
+              console.log('👀 Not my turn - waiting for question')
               setPhase('waiting')
             }
           }
-        }, 4000) // ✅ Longer delay
+        }, 3000)
         break
 
       case 'GAME_FINISHED':
+        console.log('🏁 Game finished')
         setPhase('finished')
         break
     }
-  }, [roomId, user?.id, gameState])
+  }, [roomId, user?.id])
 
   const { broadcast } = useGameBroadcast({
     roomId,
@@ -509,24 +533,6 @@ export default function GamePage() {
       })
     }
   }, [authLoading, user, roomId])
-
-
-  // ✅ Auto-refresh gameState setiap 3 detik (fallback untuk broadcast issues)
-  useEffect(() => {
-    if (!gameState || phase === 'finished' || phase === 'stage_transition') return
-
-    const interval = setInterval(async () => {
-      console.log('🔄 Polling gameState...')
-      await refreshGameState()
-    }, 3000)
-
-    setPollingInterval(interval)
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [gameState, phase])
-
 
   async function initializeGame() {
     try {
@@ -651,13 +657,9 @@ export default function GamePage() {
       const data = await response.json()
       if (!data.success) throw new Error(data.error)
 
-      console.log('✅ Answer submitted:', data)
+      console.log('✅ Answer submitted')
 
-      // ✅ FORCE refresh gameState immediately
-      await refreshGameState()
-
-      // ✅ Handle elimination
-      if (data.wasEliminated) {
+      if (data.eliminated) {
         console.log('💀 You were eliminated!')
         
         setAnswerResult({
@@ -669,22 +671,20 @@ export default function GamePage() {
         })
         setPhase('result')
 
-        setTimeout(async () => {
-          await refreshGameState() // ✅ Refresh again
+        setTimeout(() => {
+          alert('💀 You have been eliminated! You can still watch the game.')
           setPhase('waiting')
         }, 3000)
 
         return
       }
 
-      // ✅ Handle game finished
       if (data.gameFinished) {
-        console.log('🏁 Game finished!')
+        console.log('🏁 Game finished - last player standing!')
         setPhase('finished')
         return
       }
 
-      // ✅ Show result
       setAnswerResult({
         selectedAnswer,
         correctAnswer: data.result.correct_answer,
@@ -694,10 +694,7 @@ export default function GamePage() {
       })
       setPhase('result')
 
-      // ✅ Wait then handle stage complete
       setTimeout(async () => {
-        await refreshGameState() // ✅ Refresh before checking
-
         if (data.stageComplete) {
           await handleStageComplete()
         } else {
@@ -706,7 +703,6 @@ export default function GamePage() {
           setAnswerResult(null)
         }
       }, 3000)
-
     } catch (error: any) {
       console.error('❌ Submit error:', error)
       hasAnswered.current = false
