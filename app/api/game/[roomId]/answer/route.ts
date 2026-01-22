@@ -45,13 +45,13 @@ export async function POST(
       console.log('💀 Player eliminated!')
       
       // ✅ Check if game over (only 1 active player left)
-      const { data: activeCount } = await supabase
+      const { count } = await supabase
         .from('room_participants')
-        .select('user_id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .eq('room_id', roomId)
         .eq('status', 'active')
 
-      const activePlayers = activeCount || 0
+      const activePlayers = count || 0
 
       if (activePlayers <= 1) {
         console.log('🏁 Game Over - Only 1 player remaining!')
