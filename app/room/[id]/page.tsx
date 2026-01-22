@@ -89,7 +89,7 @@ export default function RoomLobbyPage() {
         lives_remaining,
         total_score,
         status,
-        user:users (
+        user:users!inner (
           username,
           level,
           avatar_url
@@ -104,8 +104,11 @@ export default function RoomLobbyPage() {
       return
     }
 
-    console.log('👥 Participants loaded:', data?.length || 0)
-    setParticipants(data || [])
+    // ✅ Type assertion to fix TypeScript error
+    const typedData = data as unknown as Participant[]
+
+    console.log('👥 Participants loaded:', typedData?.length || 0)
+    setParticipants(typedData || [])
   }
 
   function subscribeToRoomUpdates() {
