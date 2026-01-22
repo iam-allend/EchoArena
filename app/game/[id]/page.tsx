@@ -37,6 +37,8 @@ function ModernLeaderboard({
 }: any) {
   const [showPopup, setShowPopup] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+
 
   const sortedParticipants = [...participants]
     .filter((p: any) => p.status === 'active')
@@ -534,6 +536,14 @@ export default function GamePage() {
     }
   }, [authLoading, user, roomId])
 
+  // Force refresh every 2 seconds (production fallback)
+useEffect(() => {
+  if (phase === 'finished' || phase === 'loading') return
+  const interval = setInterval(() => refreshGameState(), 2000)
+  return () => clearInterval(interval)
+}, [phase, roomId])
+
+  
   async function initializeGame() {
     try {
       console.log('🎮 Initializing game...')
