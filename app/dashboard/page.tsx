@@ -103,6 +103,11 @@ export default function Dashboard() {
     router.push('/')
   }
 
+  // Handler untuk navigasi ke halaman upgrade
+  function handleUpgradeClick() {
+    router.push('/auth/upgrade')
+  }
+
   const daysRemaining = isGuest && expiresAt ? getGuestDaysRemaining(expiresAt) : null
 
   if (loading) {
@@ -138,7 +143,7 @@ export default function Dashboard() {
       <div className="relative px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
-          {/* Guest Warning */}
+          {/* Guest Warning - FIXED: Added onClick handler */}
           {isGuest && daysRemaining !== null && (
             <Alert className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/40 backdrop-blur-xl rounded-xl sm:rounded-2xl">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5">
@@ -155,6 +160,7 @@ export default function Dashboard() {
                 </div>
                 <Button
                   size="sm"
+                  onClick={handleUpgradeClick}
                   className="mt-3 sm:mt-0 w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
                 >
                   <Crown className="h-4 w-4 mr-2" />
