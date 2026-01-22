@@ -26,7 +26,7 @@ interface QuestionDisplayProps {
     isCorrect: boolean
   }
   disabled?: boolean
-  phase?: 'reading' | 'answering'
+  phase?: string
 }
 
 export function QuestionDisplay({ 
