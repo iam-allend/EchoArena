@@ -78,6 +78,10 @@ class AgoraManager {
       const token = await this.getToken(channelName, userId)
       console.log('✅ Token received')
 
+      if (!this.client) {
+        throw new Error('Agora client is not initialized')
+      }
+
       const uid = await this.client.join(
         APP_ID,
         channelName,
@@ -85,13 +89,18 @@ class AgoraManager {
         userId
       )
 
+
       console.log('✅ Joined channel with UID:', uid)
 
       this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
         encoderConfig: 'speech_standard',
       })
 
-      await this.client.publish([this.localAudioTrack])
+      if (!this.client || !this.localAudioTrack) {
+        throw new Error('Audio track or client not ready')
+      }
+
+      await this.client.publish(this.localAudioTrack)
 
       console.log('🎵 Local audio published')
 

@@ -10,7 +10,7 @@ export async function POST(
     const { roomId } = await context.params
     const body = await request.json()
 
-    console.log('✍️ Pengiriman jawaban untuk room:', roomId)
+    console.log('✍️ Answer submission for room:', roomId)
 
     const {
       userId,
@@ -23,25 +23,9 @@ export async function POST(
 
     if (!userId || !stageNumber || !questionId || !selectedAnswer) {
       return NextResponse.json(
-        { error: 'Data yang diperlukan tidak lengkap' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
-    }
-
-    // ✅ Check if player is already eliminated
-    const { data: participant } = await supabase
-      .from('room_participants')
-      .select('status, lives_remaining')
-      .eq('room_id', roomId)
-      .eq('user_id', userId)
-      .single()
-
-    if (participant?.status === 'eliminated') {
-      console.log('⚠️ Pemain sudah tereliminasi, melewati jawaban')
-      return NextResponse.json({
-        success: false,
-        error: 'Pemain telah tereliminasi'
-      }, { status: 403 })
     }
 
     // Submit answer
@@ -58,7 +42,7 @@ export async function POST(
 
     if (error) throw error
 
-    console.log('✅ Jawaban terkirim:', result)
+    console.log('✅ Answer submitted:', result)
 
     // Delete active question
     await supabase
@@ -67,59 +51,35 @@ export async function POST(
       .eq('room_id', roomId)
       .eq('stage_number', stageNumber)
 
-    // ✅ Check if player was eliminated after this answer
-    const wasEliminated = result.lives_remaining <= 0
-
-    if (wasEliminated) {
-      console.log('💀 Pemain tereliminasi!')
+    // ✅ Check if player eliminated (lives = 0)
+    if (result && typeof result === 'object' && 'lives_remaining' in result) {
+      const typedResult = result as { lives_remaining: number; status: string }
       
-      // ✅ BROADCAST elimination immediately
-      const elimChannel = supabase.channel(`room:${roomId}:elim`)
-      await elimChannel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await elimChannel.send({
-            type: 'broadcast',
-            event: 'game-event',
-            payload: {
-              type: 'PLAYER_ELIMINATED',
-              userId,
-              username: participant?.user?.username || 'Pemain'
-            }
-          })
-          setTimeout(() => supabase.removeChannel(elimChannel), 1000)
-        }
-      })
-      
-      // ✅ Check if game is over (only 1 player left)
-      const { data: gameOver } = await supabase
-        .rpc('check_game_over', { p_room_id: roomId })
+      if (typedResult.lives_remaining === 0) {
+        console.log('💀 Player eliminated:', userId)
 
-      if (gameOver) {
-        console.log('🏁 Permainan selesai - hanya 1 pemain tersisa!')
-        
+        // Update participant status
         await supabase
-          .from('game_rooms')
-          .update({ status: 'finished' })
-          .eq('id', roomId)
+          .from('room_participants')
+          .update({ status: 'eliminated' })
+          .eq('room_id', roomId)
+          .eq('user_id', userId)
 
-        const finishChannel = supabase.channel(`room:${roomId}:finish`)
-        await finishChannel.subscribe(async (status) => {
+        // ✅ Broadcast elimination (without username - frontend will get it from gameState)
+        const elimChannel = supabase.channel(`room:${roomId}:elimination`)
+        await elimChannel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
-            await finishChannel.send({
+            await elimChannel.send({
               type: 'broadcast',
               event: 'game-event',
-              payload: { type: 'GAME_FINISHED' }
+              payload: {
+                type: 'PLAYER_ELIMINATED',
+                userId
+                // Frontend can get username from gameState.participants
+              }
             })
-            setTimeout(() => supabase.removeChannel(finishChannel), 1000)
+            setTimeout(() => supabase.removeChannel(elimChannel), 1000)
           }
-        })
-
-        return NextResponse.json({
-          success: true,
-          result,
-          stageComplete: false,
-          gameFinished: true,
-          eliminated: true
         })
       }
     }
@@ -143,11 +103,10 @@ export async function POST(
             type: 'ANSWER_SUBMITTED',
             userId,
             stageNumber,
-            eliminated: wasEliminated, // ✅ NEW
           },
         })
         
-        console.log('📡 Jawaban disiarkan')
+        console.log('📡 Answer broadcasted')
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
@@ -159,10 +118,9 @@ export async function POST(
       success: true,
       result,
       stageComplete: stageComplete || false,
-      eliminated: wasEliminated, // ✅ NEW
     })
   } catch (error: any) {
-    console.error('❌ Kesalahan pengiriman jawaban:', error)
+    console.error('❌ Submit answer error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
