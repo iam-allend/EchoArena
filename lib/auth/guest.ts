@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase/client'
 
+interface GuestAccount {
+  id: string
+  username: string
+  expiresAt: Date
+  createdAt: Date
+}
+
 const GUEST_EXPIRY_DAYS = 7
 const GUEST_USERNAME_PREFIX = 'Guest_'
 

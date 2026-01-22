@@ -77,7 +77,10 @@ export function VoiceControl({
       const channelName = voiceRoomUrl.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 64)
 
       const { client, audioTrack } = await AgoraManager.joinChannel(channelName, myUserId)
-
+      if (!client) {
+        throw new Error('Agora client is null')
+      }
+      
       // Setup event listeners
       client.on('user-joined', (user: IAgoraRTCRemoteUser) => {
         console.log('👤 User joined:', user.uid)
