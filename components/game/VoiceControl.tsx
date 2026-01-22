@@ -9,7 +9,7 @@ interface VoiceControlProps {
   voiceRoomUrl: string | null
   isMyTurn: boolean
   myUserId: string
-  phase?: 'reading' | 'answering' | 'waiting'
+  phase?: string 
 }
 
 export function VoiceControl({ 
