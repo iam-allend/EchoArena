@@ -110,7 +110,7 @@ export default function Dashboard() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-purple-400" />
-          <p className="text-purple-200 font-medium text-sm sm:text-base">Loading Dashboard...</p>
+          <p className="text-purple-200 font-medium text-sm sm:text-base">Sedang memuat...</p>
         </div>
       </div>
     )
@@ -147,9 +147,9 @@ export default function Dashboard() {
                     <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <div>
-                    <div className="font-bold text-base sm:text-lg text-white">Guest Account</div>
+                    <div className="font-bold text-base sm:text-lg text-white">Akun Tamu</div>
                     <div className="text-amber-100 text-sm sm:text-base">
-                      Expires in <span className="font-bold">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span>
+                      Berakhir dalam <span className="font-bold">{daysRemaining} hari</span>
                     </div>
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export default function Dashboard() {
                   className="mt-3 sm:mt-0 w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
                 >
                   <Crown className="h-4 w-4 mr-2" />
-                  Upgrade Now
+                  Upgrade Akun
                 </Button>
               </div>
             </Alert>
@@ -170,11 +170,11 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2">
                   <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-                    Welcome, {user.username}!
+                    Halo, {user.username}!
                   </span>
                 </h1>
                 <p className="text-purple-200 text-base sm:text-lg lg:text-xl">
-                  {isGuest ? '✨ Guest mode • Let’s play!' : '🎮 Ready for the next battle?'}
+                  {isGuest ? '✨ Mode Tamu • Ayo Main!' : '🎮 Siap untuk tantangan seru?'}
                 </p>
               </div>
               <Button
@@ -184,7 +184,7 @@ export default function Dashboard() {
                 className="w-full sm:w-auto border-white/30 text-white hover:bg-white/10"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                Keluar
               </Button>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function Dashboard() {
                 <div className="text-5xl sm:text-6xl font-black bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent">
                   {user.xp || 0}
                 </div>
-                <div className="text-purple-200 font-bold mt-1 text-lg">Experience</div>
+                <div className="text-purple-200 font-bold mt-1 text-lg">Total XP</div>
               </div>
             </Card>
 
@@ -226,7 +226,7 @@ export default function Dashboard() {
                 <div className="text-5xl sm:text-6xl font-black bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {user.total_games || 0}
                 </div>
-                <div className="text-blue-200 font-bold mt-1 text-lg">Games Played</div>
+                <div className="text-blue-200 font-bold mt-1 text-lg">Total Main</div>
               </div>
             </Card>
           </div>
@@ -241,14 +241,14 @@ export default function Dashboard() {
                 <Plus className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">
-                Create Room
+                Buat Room
               </h3>
               <p className="text-green-100 text-base sm:text-lg mb-5">
-                Start a new quiz battle and invite friends
+                Bikin kuis baru dan ajak temanmu
               </p>
               <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
                 <Play className="h-4 w-4 mr-2" />
-                Create Now
+                Buat Sekarang
               </Button>
             </div>
 
@@ -260,14 +260,14 @@ export default function Dashboard() {
                 <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">
-                Join Room
+                Gabung Room
               </h3>
               <p className="text-blue-100 text-base sm:text-lg mb-5">
-                Enter room code and join the battle
+                Masukkan kode dan mulai main
               </p>
               <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
                 <ArrowRight className="h-4 w-4 mr-2" />
-                Join Now
+                Gabung Yuk
               </Button>
             </div>
           </div>
@@ -276,14 +276,14 @@ export default function Dashboard() {
           <Card className="bg-gray-900/70 backdrop-blur-xl border-purple-500/30 p-5 sm:p-6 lg:p-8">
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-3">
               <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
-              Quiz Categories
+              Pilihan Topik
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
               {[
-                { emoji: '📊', title: 'Mathematics', desc: 'Algebra, Geometry, Calculus', count: '120 Quizzes', color: 'yellow' },
-                { emoji: '🔬', title: 'Science', desc: 'Physics, Chemistry, Biology', count: '95 Quizzes', color: 'green' },
-                { emoji: '📚', title: 'History', desc: 'World events & civilizations', count: '78 Quizzes', color: 'blue' },
-                { emoji: '📖', title: 'Literature', desc: 'Reading & comprehension', count: '64 Quizzes', color: 'purple' },
+                { emoji: '📊', title: 'Matematika', desc: 'Aljabar, Geometri, Berhitung', count: '120 Kuis', color: 'yellow' },
+                { emoji: '🔬', title: 'Sains', desc: 'Fisika, Kimia, Biologi', count: '95 Kuis', color: 'green' },
+                { emoji: '📚', title: 'Sejarah', desc: 'Peristiwa dunia & sejarah', count: '78 Kuis', color: 'blue' },
+                { emoji: '📖', title: 'Bahasa', desc: 'Membaca & cerita', count: '64 Kuis', color: 'purple' },
               ].map((cat, i) => (
                 <div
                   key={i}
@@ -315,12 +315,12 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
-                      Active Rooms
+                      Kuis Berlangsung
                       <span className="px-3 py-1 bg-green-500/20 border border-green-500/50 rounded-full text-green-300 text-sm font-bold">
                         {activeRooms.length}
                       </span>
                     </h2>
-                    <p className="text-green-200 text-sm">Your ongoing battles</p>
+                    <p className="text-green-200 text-sm">Permainanmu saat ini</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-green-300 animate-pulse text-sm font-medium">
@@ -352,12 +352,12 @@ export default function Dashboard() {
                                 ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                                 : 'bg-green-500/20 text-green-300 border-green-500/40 animate-pulse'
                             }`}>
-                              {room.status === 'waiting' ? 'Waiting' : 'Playing'}
+                              {room.status === 'waiting' ? 'Menunggu' : 'Main'}
                             </span>
                           </div>
                           <div className="text-sm text-purple-300 flex items-center gap-3">
                             <Sparkles className="h-4 w-4" />
-                            Stage {room.current_stage} / {room.max_stages}
+                            Babak {room.current_stage} / {room.max_stages}
                           </div>
                         </div>
                       </div>
@@ -366,14 +366,14 @@ export default function Dashboard() {
                         className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 mt-3 sm:mt-0"
                         size="sm"
                       >
-                        {room.status === 'waiting' ? 'Join Lobby' : 'Resume'}
+                        {room.status === 'waiting' ? 'Masuk Lobi' : 'Lanjut Main'}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-white/10">
                       <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                        <span>Progress</span>
+                        <span>Kemajuan</span>
                         <span className="text-green-400 font-bold">
                           {Math.round((room.current_stage / room.max_stages) * 100)}%
                         </span>
@@ -400,12 +400,12 @@ export default function Dashboard() {
                     <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white">Recent Games</h2>
-                    <p className="text-purple-200 text-sm">Your completed battles</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white">Riwayat Main</h2>
+                    <p className="text-purple-200 text-sm">Kuis yang sudah selesai</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" className="text-purple-300 hover:text-purple-100">
-                  View All <ArrowRight className="ml-2 h-4 w-4" />
+                  Lihat Semua <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
 
@@ -424,7 +424,7 @@ export default function Dashboard() {
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span className="text-lg sm:text-xl font-black text-white">{room.room_code}</span>
                             <span className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full text-green-300 text-xs font-bold">
-                              COMPLETED
+                              SELESAI
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300">
@@ -434,7 +434,7 @@ export default function Dashboard() {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-4 w-4" />
-                              {room.max_stages} Stages
+                              {room.max_stages} Babak
                             </div>
                           </div>
                         </div>

@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
     if (!channelName || !uid) {
       return NextResponse.json(
-        { error: 'channelName and uid required' },
+        { error: 'channelName dan uid diperlukan' },
         { status: 400 }
       )
     }
@@ -16,9 +16,9 @@ export async function POST(request: Request) {
     const appCertificate = process.env.AGORA_APP_CERTIFICATE!
 
     if (!appId || !appCertificate) {
-      console.error('❌ Missing Agora credentials')
+      console.error('❌ Kredensial Agora tidak ditemukan')
       return NextResponse.json(
-        { error: 'Server configuration error' },
+        { error: 'Kesalahan konfigurasi server' },
         { status: 500 }
       )
     }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       expirationTimeInSeconds
     )
 
-    console.log('✅ Token generated for channel:', channelName)
+    console.log('✅ Token berhasil dibuat untuk channel:', channelName)
 
     return NextResponse.json({
       success: true,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     })
 
   } catch (error: any) {
-    console.error('❌ Token generation error:', error)
+    console.error('❌ Kesalahan pembuatan token:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }

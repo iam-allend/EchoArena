@@ -10,7 +10,7 @@ export async function POST(
     const { roomId } = await context.params
     const body = await request.json()
 
-    console.log('✍️ Answer submission for room:', roomId)
+    console.log('✍️ Pengiriman jawaban untuk room:', roomId)
 
     const {
       userId,
@@ -23,7 +23,7 @@ export async function POST(
 
     if (!userId || !stageNumber || !questionId || !selectedAnswer) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Data yang diperlukan tidak lengkap' },
         { status: 400 }
       )
     }
@@ -37,10 +37,10 @@ export async function POST(
       .single()
 
     if (participant?.status === 'eliminated') {
-      console.log('⚠️ Player already eliminated, skipping answer')
+      console.log('⚠️ Pemain sudah tereliminasi, melewati jawaban')
       return NextResponse.json({
         success: false,
-        error: 'Player is eliminated'
+        error: 'Pemain telah tereliminasi'
       }, { status: 403 })
     }
 
@@ -58,7 +58,7 @@ export async function POST(
 
     if (error) throw error
 
-    console.log('✅ Answer submitted:', result)
+    console.log('✅ Jawaban terkirim:', result)
 
     // Delete active question
     await supabase
@@ -71,7 +71,7 @@ export async function POST(
     const wasEliminated = result.lives_remaining <= 0
 
     if (wasEliminated) {
-      console.log('💀 Player eliminated!')
+      console.log('💀 Pemain tereliminasi!')
       
       // ✅ BROADCAST elimination immediately
       const elimChannel = supabase.channel(`room:${roomId}:elim`)
@@ -83,7 +83,7 @@ export async function POST(
             payload: {
               type: 'PLAYER_ELIMINATED',
               userId,
-              username: participant?.user?.username || 'Player'
+              username: participant?.user?.username || 'Pemain'
             }
           })
           setTimeout(() => supabase.removeChannel(elimChannel), 1000)
@@ -95,7 +95,7 @@ export async function POST(
         .rpc('check_game_over', { p_room_id: roomId })
 
       if (gameOver) {
-        console.log('🏁 Game over - only 1 player remaining!')
+        console.log('🏁 Permainan selesai - hanya 1 pemain tersisa!')
         
         await supabase
           .from('game_rooms')
@@ -147,7 +147,7 @@ export async function POST(
           },
         })
         
-        console.log('📡 Answer broadcasted')
+        console.log('📡 Jawaban disiarkan')
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
@@ -162,7 +162,7 @@ export async function POST(
       eliminated: wasEliminated, // ✅ NEW
     })
   } catch (error: any) {
-    console.error('❌ Submit answer error:', error)
+    console.error('❌ Kesalahan pengiriman jawaban:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

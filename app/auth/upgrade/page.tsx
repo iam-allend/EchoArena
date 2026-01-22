@@ -39,12 +39,12 @@ export default function UpgradePage() {
     setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setError('Kata sandi tidak cocok')
       return
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError('Kata sandi minimal harus 8 karakter')
       return
     }
 
@@ -65,7 +65,7 @@ export default function UpgradePage() {
       router.push('/dashboard')
     } catch (err: any) {
       console.error('Upgrade error:', err)
-      setError(err.message || 'Upgrade failed. Please try again.')
+      setError(err.message || 'Upgrade gagal. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -76,7 +76,7 @@ export default function UpgradePage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
-          <p className="text-purple-200 font-medium">Loading...</p>
+          <p className="text-purple-200 font-medium">Memuat...</p>
         </div>
       </div>
     )
@@ -107,10 +107,10 @@ export default function UpgradePage() {
               <Crown className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent mb-4">
-              Upgrade to Premium
+              Upgrade ke Premium
             </h1>
             <p className="text-xl text-purple-200">
-              Transform your guest account into a lifetime membership — 100% FREE! 🎉
+              Ubah akun tamu kamu jadi keanggotaan seumur hidup — 100% GRATIS! 🎉
             </p>
           </div>
 
@@ -123,8 +123,8 @@ export default function UpgradePage() {
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Never Lose Progress</h3>
-                  <p className="text-purple-200 text-sm">Save all stats, levels, XP, and achievements permanently</p>
+                  <h3 className="text-white font-bold text-lg mb-1">Simpan Progres</h3>
+                  <p className="text-purple-200 text-sm">Simpan semua statistik, level, XP, dan pencapaian selamanya</p>
                 </div>
               </div>
             </div>
@@ -136,8 +136,8 @@ export default function UpgradePage() {
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Friend System</h3>
-                  <p className="text-purple-200 text-sm">Add friends and challenge them to epic quiz battles</p>
+                  <h3 className="text-white font-bold text-lg mb-1">Sistem Teman</h3>
+                  <p className="text-purple-200 text-sm">Tambah teman dan tantang mereka dalam duel kuis seru</p>
                 </div>
               </div>
             </div>
@@ -149,8 +149,8 @@ export default function UpgradePage() {
                   <Lock className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Private Rooms</h3>
-                  <p className="text-purple-200 text-sm">Create custom rooms with passwords for exclusive matches</p>
+                  <h3 className="text-white font-bold text-lg mb-1">Room Pribadi</h3>
+                  <p className="text-purple-200 text-sm">Buat room khusus dengan kata sandi untuk pertandingan eksklusif</p>
                 </div>
               </div>
             </div>
@@ -162,8 +162,8 @@ export default function UpgradePage() {
                   <Trophy className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Leaderboard Fame</h3>
-                  <p className="text-purple-200 text-sm">Compete globally and climb to the top of the rankings</p>
+                  <h3 className="text-white font-bold text-lg mb-1">Papan Peringkat</h3>
+                  <p className="text-purple-200 text-sm">Bersaing secara global dan naik ke puncak peringkat</p>
                 </div>
               </div>
             </div>
@@ -174,10 +174,10 @@ export default function UpgradePage() {
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl text-white flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-yellow-400" />
-                Complete Your Upgrade
+                Selesaikan Upgrade Kamu
               </CardTitle>
               <CardDescription className="text-purple-200 text-base">
-                Fill in your details below to unlock all premium features
+                Isi detail di bawah ini untuk membuka semua fitur premium
               </CardDescription>
             </CardHeader>
 
@@ -194,7 +194,7 @@ export default function UpgradePage() {
                   <Label htmlFor="username" className="text-white font-semibold">Username</Label>
                   <Input
                     id="username"
-                    placeholder="warrior123"
+                    placeholder="pejuang123"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
@@ -202,15 +202,15 @@ export default function UpgradePage() {
                     maxLength={20}
                     className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
                   />
-                  <p className="text-sm text-purple-300">Keep your current username or choose a new one</p>
+                  <p className="text-sm text-purple-300">Pertahankan username saat ini atau pilih yang baru</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-semibold">Email Address</Label>
+                  <Label htmlFor="email" className="text-white font-semibold">Alamat Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="kamu@contoh.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
@@ -220,7 +220,7 @@ export default function UpgradePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-white font-semibold">Password</Label>
+                    <Label htmlFor="password" className="text-white font-semibold">Kata Sandi</Label>
                     <Input
                       id="password"
                       type="password"
@@ -231,11 +231,11 @@ export default function UpgradePage() {
                       minLength={8}
                       className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
                     />
-                    <p className="text-xs text-purple-300">Minimum 8 characters</p>
+                    <p className="text-xs text-purple-300">Minimal 8 karakter</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-white font-semibold">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" className="text-white font-semibold">Konfirmasi Kata Sandi</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -258,12 +258,12 @@ export default function UpgradePage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                      Upgrading Your Account...
+                      Sedang Mengupgrade Akun...
                     </>
                   ) : (
                     <>
                       <Crown className="mr-2 h-6 w-6" />
-                      Upgrade Now - 100% FREE Forever!
+                      Upgrade Sekarang - 100% GRATIS Selamanya!
                     </>
                   )}
                 </Button>
@@ -273,11 +273,11 @@ export default function UpgradePage() {
                   onClick={() => router.push('/dashboard')}
                   className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border-2 border-white/20 backdrop-blur-sm transition-all hover:scale-105"
                 >
-                  Maybe Later
+                  Nanti Saja
                 </Button>
 
                 <p className="text-center text-sm text-purple-300">
-                  🔒 Your data is secure and encrypted. No credit card required.
+                  🔒 Datamu aman dan terenkripsi. Tidak perlu kartu kredit.
                 </p>
               </CardFooter>
             </form>
@@ -287,17 +287,17 @@ export default function UpgradePage() {
           <div className="mt-8 flex items-center justify-center gap-6 text-sm text-purple-300">
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
-              <span>100% Free</span>
+              <span>100% Gratis</span>
             </div>
             <div className="w-1 h-1 bg-purple-500 rounded-full"></div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
-              <span>No Credit Card</span>
+              <span>Tanpa Kartu Kredit</span>
             </div>
             <div className="w-1 h-1 bg-purple-500 rounded-full"></div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
-              <span>Instant Access</span>
+              <span>Akses Instan</span>
             </div>
           </div>
         </div>

@@ -133,11 +133,11 @@ export default function Home() {
           </div>
 
           <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
-            Where Voices Echo, Champions Rise
+            Di Mana Suara Menggema, Juara Tercipta
           </p>
 
           <p className="text-lg sm:text-xl lg:text-2xl text-purple-100 max-w-3xl mx-auto">
-            Voice-controlled quiz battles • Real-time multiplayer • Belajar sambil bertanding
+            Pertarungan kuis kontrol suara • Multiplayer waktu nyata • Belajar sambil bertanding
           </p>
 
           {/* CTA Buttons */}
@@ -186,7 +186,7 @@ export default function Home() {
           <div className="inline-flex items-center gap-2 bg-purple-900/50 border-2 border-purple-500/50 px-5 sm:px-6 py-3 sm:py-4 rounded-full mt-6 backdrop-blur-sm">
             <Sparkles className="w-5 h-5 text-purple-300" />
             <p className="text-sm sm:text-base font-medium text-purple-200">
-              <strong className="text-purple-100">Guest accounts</strong> expire after 7 days. Create an account to save progress forever!
+              <strong className="text-purple-100">Akun tamu</strong> kedaluwarsa setelah 7 hari. Buat akun untuk menyimpan progres selamanya!
             </p>
           </div>
 
@@ -196,41 +196,41 @@ export default function Home() {
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Mic className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Voice Controlled</h3>
-              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Answer questions with your voice, not clicks. Natural and engaging gameplay</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Kontrol Suara</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Jawab pertanyaan dengan suaramu, bukan klik. Permainan yang alami dan seru.</p>
             </div>
 
             <div className="bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border-2 border-pink-500/30 shadow-lg hover:shadow-2xl hover:shadow-pink-500/20 transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Multiplayer Rooms</h3>
-              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Battle with 2-8 players in real-time. Make friends while you compete</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Ruang Multiplayer</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Bertanding dengan 2-8 pemain secara real-time. Cari teman sambil berkompetisi.</p>
             </div>
 
             <div className="bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border-2 border-orange-500/30 shadow-lg hover:shadow-2xl hover:shadow-orange-500/20 transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:rotate-6 transition-transform">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Compete & Learn</h3>
-              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Turn-based battles, real knowledge gains. Level up your brain!</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Kompetisi & Belajar</h3>
+              <p className="text-gray-300 leading-relaxed text-sm sm:text-base">Pertarungan berbasis giliran, ilmu pengetahuan nyata. Asah otakmu!</p>
             </div>
           </div>
 
           {/* Quiz Categories */}
           <div className="max-w-7xl mx-auto mt-16 sm:mt-24 px-4">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-4">
-              Explore Quiz Categories
+              Jelajahi Kategori Kuis
             </h2>
             <p className="text-purple-200 text-center mb-10 sm:mb-12 text-lg sm:text-xl">
-              Choose from various subjects and start your learning journey
+              Pilih dari berbagai mata pelajaran dan mulai perjalanan belajarmu
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { emoji: '📊', title: 'Mathematics', desc: 'Algebra, Geometry, Calculus & more', count: '120 Quizzes', color: 'yellow' },
-                { emoji: '🔬', title: 'Science', desc: 'Physics, Chemistry, Biology topics', count: '95 Quizzes', color: 'green' },
-                { emoji: '📚', title: 'History', desc: 'World events, civilizations & cultures', count: '78 Quizzes', color: 'blue' },
-                { emoji: '📖', title: 'Literature', desc: 'Reading comprehension & analysis', count: '64 Quizzes', color: 'purple' }
+                { emoji: '📊', title: 'Matematika', desc: 'Aljabar, Geometri, Kalkulus & lainnya', count: '120 Kuis', color: 'yellow' },
+                { emoji: '🔬', title: 'Sains', desc: 'Topik Fisika, Kimia, Biologi', count: '95 Kuis', color: 'green' },
+                { emoji: '📚', title: 'Sejarah', desc: 'Peristiwa dunia, peradaban & budaya', count: '78 Kuis', color: 'blue' },
+                { emoji: '📖', title: 'Sastra', desc: 'Pemahaman bacaan & analisis', count: '64 Kuis', color: 'purple' }
               ].map((cat, i) => (
                 <div
                   key={i}
@@ -253,17 +253,17 @@ export default function Home() {
           {/* Why Choose */}
           <div className="max-w-6xl mx-auto mt-16 sm:mt-24 px-4">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-6">
-              Why Choose EchoArena?
+              Mengapa Memilih EchoArena?
             </h2>
             <p className="text-purple-200 text-center mb-10 sm:mb-12 text-lg">
-              Discover the benefits that make learning fun and effective
+              Temukan manfaat yang membuat belajar jadi menyenangkan dan efektif
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
               {[
-                { icon: Zap, title: "Instant Feedback", desc: "Immediate results and explanations for every answer.", color: "blue" },
-                { icon: Trophy, title: "Gamified Learning", desc: "Points, achievements, leaderboards.", color: "green" },
-                { icon: Users, title: "Social Learning", desc: "Challenge friends, groups, voice chat.", color: "purple" },
-                { icon: Star, title: "Personalized", desc: "Adaptive difficulty & custom quizzes.", color: "orange" }
+                { icon: Zap, title: "Umpan Balik Instan", desc: "Hasil dan penjelasan langsung untuk setiap jawaban.", color: "blue" },
+                { icon: Trophy, title: "Belajar Tergamifikasi", desc: "Poin, pencapaian, dan papan peringkat.", color: "green" },
+                { icon: Users, title: "Belajar Sosial", desc: "Tantang teman, grup, dan obrolan suara.", color: "purple" },
+                { icon: Star, title: "Terpersonalisasi", desc: "Tingkat kesulitan adaptif & kuis kustom.", color: "orange" }
               ].map((item, i) => (
                 <div key={i} className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 sm:p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all">
                   <div className={`w-14 h-14 bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 rounded-xl flex items-center justify-center mb-4 shadow-lg m m-auto`}>
@@ -283,7 +283,7 @@ export default function Home() {
                 <Code className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-                Development Team
+                Tim Pengembang
               </h2>
               <p className="text-purple-200 text-lg sm:text-xl">
                 Dibuat dengan semangat oleh mahasiswa D3 Teknik Informatika Universitas Dian Nuswantoro

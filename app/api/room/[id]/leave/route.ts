@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-// Helper function to validate UUID
+// Fungsi bantuan untuk memvalidasi UUID
 function isValidUUID(uuid: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   return uuidRegex.test(uuid)
@@ -9,67 +9,67 @@ function isValidUUID(uuid: string): boolean {
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ id: string }> }  // ✅ params adalah Promise di Next.js 15
+  context: { params: Promise<{ id: string }> }  
 ) {
   try {
     const supabase = await createClient()
     
-    // ✅ AWAIT params untuk mendapatkan id
+    
     const { id: roomId } = await context.params
     
-    // ✅ VALIDASI 1: Cek roomId
-    console.log('🔍 Received roomId:', roomId, typeof roomId)
+   
+    console.log('🔍 Menerima roomId:', roomId, typeof roomId)
     
     if (!roomId || roomId === 'undefined') {
-      console.error('❌ Invalid roomId:', roomId)
+      console.error('❌ roomId tidak valid:', roomId)
       return NextResponse.json(
-        { error: 'Invalid room ID' },
+        { error: 'ID Room tidak valid' },
         { status: 400 }
       )
     }
 
     if (!isValidUUID(roomId)) {
-      console.error('❌ roomId is not a valid UUID:', roomId)
+      console.error('❌ roomId bukan UUID yang valid:', roomId)
       return NextResponse.json(
-        { error: 'Room ID must be a valid UUID' },
+        { error: 'ID Room harus berupa UUID yang valid' },
         { status: 400 }
       )
     }
     
-    // ✅ VALIDASI 2: Parse request body
+    // ✅ VALIDASI 2: Parse body permintaan
     let userId: string
     try {
       const body = await request.json()
       userId = body.userId
-      console.log('🔍 Received userId:', userId, typeof userId)
+      console.log('🔍 Menerima userId:', userId, typeof userId)
     } catch (parseError) {
-      console.error('❌ Failed to parse request body:', parseError)
+      console.error('❌ Gagal mengurai permintaan:', parseError)
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: 'Permintaan tidak valid' },
         { status: 400 }
       )
     }
 
     // ✅ VALIDASI 3: Cek userId
     if (!userId || userId === 'undefined') {
-      console.error('❌ Invalid userId:', userId)
+      console.error('❌ userId tidak valid:', userId)
       return NextResponse.json(
-        { error: 'User ID is required and cannot be undefined' },
+        { error: 'ID Pengguna diperlukan dan tidak boleh undefined' },
         { status: 400 }
       )
     }
 
     if (!isValidUUID(userId)) {
-      console.error('❌ userId is not a valid UUID:', userId)
+      console.error('❌ userId bukan UUID yang valid:', userId)
       return NextResponse.json(
-        { error: 'User ID must be a valid UUID' },
+        { error: 'ID Pengguna harus berupa UUID yang valid' },
         { status: 400 }
       )
     }
 
-    console.log('✅ Valid UUIDs - userId:', userId, 'roomId:', roomId)
+    console.log('✅ UUID Valid - userId:', userId, 'roomId:', roomId)
 
-    // Verify user exists
+    // Verifikasi pengguna ada
     const { data: userExists, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -77,16 +77,16 @@ export async function POST(
       .single()
 
     if (userError || !userExists) {
-      console.error('❌ User verification failed:', userError)
+      console.error('❌ Verifikasi pengguna gagal:', userError)
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'Pengguna tidak ditemukan' },
         { status: 404 }
       )
     }
 
-    console.log('✅ User verified')
+    console.log('✅ Pengguna terverifikasi')
 
-    // Update participant status to 'left'
+    // Perbarui status peserta menjadi 'left'
     const { error: updateError } = await supabase
       .from('room_participants')
       .update({ status: 'left' })
@@ -94,19 +94,19 @@ export async function POST(
       .eq('user_id', userId)
 
     if (updateError) {
-      console.error('❌ Failed to update participant:', updateError)
+      console.error('❌ Gagal memperbarui peserta:', updateError)
       return NextResponse.json(
         { 
-          error: 'Failed to update participant status',
+          error: 'Gagal memperbarui status peserta',
           details: updateError.message 
         },
         { status: 500 }
       )
     }
 
-    console.log('✅ Participant marked as left')
+    console.log('✅ Peserta ditandai keluar')
 
-    // Check if room is now empty
+    // Periksa apakah room sekarang kosong
     const { data: participants, error: participantsError } = await supabase
       .from('room_participants')
       .select('id, user_id')
@@ -114,26 +114,26 @@ export async function POST(
       .neq('status', 'left')
 
     if (participantsError) {
-      console.error('❌ Failed to check participants:', participantsError)
-      // Don't throw, participant already left
+      console.error('❌ Gagal memeriksa peserta:', participantsError)
+      // Jangan throw, peserta sudah keluar
     }
 
     if (!participants || participants.length === 0) {
-      // Delete empty room
-      console.log('🗑️ Room is empty, deleting...')
+      // Hapus room yang kosong
+      console.log('🗑️ Room kosong, menghapus...')
       const { error: deleteError } = await supabase
         .from('game_rooms')
         .delete()
         .eq('id', roomId)
       
       if (deleteError) {
-        console.error('⚠️ Failed to delete room:', deleteError)
-        // Don't throw, participant already left
+        console.error('⚠️ Gagal menghapus room:', deleteError)
+        // Jangan throw, peserta sudah keluar
       } else {
-        console.log('✅ Room deleted')
+        console.log('✅ Room dihapus')
       }
     } else {
-      // Check if host left, assign new host
+      // Periksa jika host keluar, tetapkan host baru
       const { data: room } = await supabase
         .from('game_rooms')
         .select('host_user_id')
@@ -141,7 +141,7 @@ export async function POST(
         .single()
 
       if (room?.host_user_id === userId) {
-        console.log('👑 Host left, assigning new host...')
+        console.log('👑 Host keluar, menetapkan host baru...')
         
         const newHostId = participants[0]?.user_id
 
@@ -152,9 +152,9 @@ export async function POST(
             .eq('id', roomId)
 
           if (hostError) {
-            console.error('⚠️ Failed to update host:', hostError)
+            console.error('⚠️ Gagal memperbarui host:', hostError)
           } else {
-            console.log('✅ New host assigned:', newHostId)
+            console.log('✅ Host baru ditetapkan:', newHostId)
           }
         }
       }
@@ -162,13 +162,13 @@ export async function POST(
 
     return NextResponse.json({ 
       success: true,
-      message: 'Successfully left room'
+      message: 'Berhasil keluar dari room'
     })
   } catch (error: any) {
-    console.error('❌ Leave room error:', error)
+    console.error('❌ Kesalahan keluar room:', error)
     return NextResponse.json(
       { 
-        error: error.message || 'Failed to leave room',
+        error: error.message || 'Gagal keluar dari room',
         details: error.details || error.hint || null
       },
       { status: 500 }

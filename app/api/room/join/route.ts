@@ -7,12 +7,12 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { roomCode, userId } = await request.json()
 
-    console.log('🔍 Join room request:', { roomCode, userId })
+    console.log('🔍 Permintaan bergabung ke room:', { roomCode, userId })
 
     // Validate room code format
     if (!validateRoomCode(roomCode.toUpperCase())) {
       return NextResponse.json(
-        { error: 'Invalid room code format' },
+        { error: 'Format kode room tidak valid' },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     // Validate userId
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID required' },
+        { error: 'ID Pengguna diperlukan' },
         { status: 400 }
       )
     }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     if (userError || !userExists) {
       return NextResponse.json(
-        { error: 'Invalid user' },
+        { error: 'Pengguna tidak valid' },
         { status: 401 }
       )
     }
@@ -46,19 +46,19 @@ export async function POST(request: Request) {
     )
 
     if (roomError) {
-      console.error('❌ RPC error:', roomError)
+      console.error('❌ Kesalahan RPC:', roomError)
       throw roomError
     }
 
     if (!rooms || rooms.length === 0) {
       return NextResponse.json(
-        { error: 'Room not found or already started' },
+        { error: 'Room tidak ditemukan atau sudah dimulai' },
         { status: 404 }
       )
     }
 
     const room = rooms[0]
-    console.log('✅ Room found:', room.id)
+    console.log('✅ Room ditemukan:', room.id)
 
     // ✅ CHECK: Apakah user sudah pernah join room ini?
     const { data: existing, error: existingError } = await supabase
@@ -69,19 +69,19 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (existingError) {
-      console.error('❌ Error checking existing participant:', existingError)
+      console.error('❌ Kesalahan memeriksa peserta yang ada:', existingError)
       throw existingError
     }
 
     if (existing) {
-      console.log('🔍 Existing participant found:', existing)
+      console.log('🔍 Peserta yang ada ditemukan:', existing)
       
       // ✅ CASE 1: User masih active di room (belum leave)
       if (existing.status === 'active') {
-        console.log('✅ User already active in room')
+        console.log('✅ Pengguna sudah aktif di room')
         return NextResponse.json({
           success: true,
-          message: 'Already in room',
+          message: 'Sudah berada di dalam room',
           room: {
             id: room.id,
             code: room.room_code,
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
       // ✅ CASE 2: User sebelumnya leave, sekarang join lagi
       if (existing.status === 'left') {
-        console.log('🔄 User rejoining room, updating status...')
+        console.log('🔄 Pengguna bergabung kembali, memperbarui status...')
         
         const { error: updateError } = await supabase
           .from('room_participants')
@@ -105,15 +105,15 @@ export async function POST(request: Request) {
           .eq('id', existing.id)
 
         if (updateError) {
-          console.error('❌ Failed to update participant:', updateError)
+          console.error('❌ Gagal memperbarui peserta:', updateError)
           throw updateError
         }
 
-        console.log('✅ Participant status updated to active')
+        console.log('✅ Status peserta diperbarui menjadi aktif')
         
         return NextResponse.json({
           success: true,
-          message: 'Rejoined room',
+          message: 'Berhasil bergabung kembali',
           room: {
             id: room.id,
             code: room.room_code,
@@ -125,14 +125,14 @@ export async function POST(request: Request) {
       // ✅ CASE 3: User eliminated (optional - tergantung game logic)
       if (existing.status === 'eliminated') {
         return NextResponse.json(
-          { error: 'You were eliminated from this room' },
+          { error: 'Anda telah tereliminasi dari room ini' },
           { status: 403 }
         )
       }
     }
 
     // ✅ CASE 4: User belum pernah join room ini, insert baru
-    console.log('➕ Adding new participant...')
+    console.log('➕ Menambahkan peserta baru...')
     
     const { error: participantError } = await supabase
       .from('room_participants')
@@ -145,15 +145,15 @@ export async function POST(request: Request) {
       })
 
     if (participantError) {
-      console.error('❌ Failed to add participant:', participantError)
+      console.error('❌ Gagal menambahkan peserta:', participantError)
       throw participantError
     }
 
-    console.log('✅ New participant added')
+    console.log('✅ Peserta baru ditambahkan')
 
     return NextResponse.json({
       success: true,
-      message: 'Joined room successfully',
+      message: 'Berhasil bergabung ke room',
       room: {
         id: room.id,
         code: room.room_code,
@@ -161,10 +161,10 @@ export async function POST(request: Request) {
       },
     })
   } catch (error: any) {
-    console.error('❌ Join room error:', error)
+    console.error('❌ Kesalahan saat bergabung room:', error)
     return NextResponse.json(
       { 
-        error: error.message || 'Failed to join room',
+        error: error.message || 'Gagal bergabung ke room',
         details: error.details || null
       },
       { status: 500 }

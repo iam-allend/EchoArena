@@ -28,17 +28,17 @@ export default function RegisterPage() {
     setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setError('Kata sandi tidak cocok')
       return
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError('Kata sandi minimal harus 8 karakter')
       return
     }
 
     if (formData.username.length < 3) {
-      setError('Username must be at least 3 characters')
+      setError('Username minimal harus 3 karakter')
       return
     }
 
@@ -52,7 +52,7 @@ export default function RegisterPage() {
         .maybeSingle()
 
       if (existingUser) {
-        setError('Username already taken')
+        setError('Username sudah digunakan')
         setLoading(false)
         return
       }
@@ -66,7 +66,7 @@ export default function RegisterPage() {
       })
 
       if (authError) throw authError
-      if (!authData.user) throw new Error('User creation failed')
+      if (!authData.user) throw new Error('Gagal membuat pengguna')
 
       const { data: newUser, error: dbError } = await supabase
         .from('users')
@@ -92,7 +92,7 @@ export default function RegisterPage() {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
-        alert('Please check your email to confirm your account, then login.')
+        alert('Silakan periksa email Anda untuk konfirmasi akun, lalu masuk.')
         router.push('/auth/login')
         return
       }
@@ -101,7 +101,7 @@ export default function RegisterPage() {
       router.refresh()
     } catch (err: any) {
       console.error('Registration error:', err)
-      setError(err.message || 'Registration failed. Please try again.')
+      setError(err.message || 'Registrasi gagal. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -131,10 +131,10 @@ export default function RegisterPage() {
               <Trophy className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Join the Arena
+              Gabung ke Arena
             </CardTitle>
             <CardDescription className="text-gray-400 text-base">
-              Create your account and compete with players worldwide! 🎮
+              Buat akunmu dan bersaing dengan pemain di seluruh dunia! 🎮
             </CardDescription>
           </CardHeader>
 
@@ -157,7 +157,7 @@ export default function RegisterPage() {
                 <div className="relative">
                   <Input
                     id="username"
-                    placeholder="WarriorKing123"
+                    placeholder="RajaPrajurit123"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
@@ -171,7 +171,7 @@ export default function RegisterPage() {
                 </div>
                 <p className="text-xs text-gray-500 flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
-                  3-20 characters, visible to other players
+                  3-20 karakter, terlihat oleh pemain lain
                 </p>
               </div>
 
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="champion@echoarena.com"
+                    placeholder="juara@echoarena.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
@@ -199,7 +199,7 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-gray-300 font-medium flex items-center gap-2">
                   <Lock className="w-4 h-4 text-purple-400" />
-                  Password
+                  Kata Sandi
                 </Label>
                 <Input
                   id="password"
@@ -218,14 +218,14 @@ export default function RegisterPage() {
                     formData.password.length < 8 ? 'bg-yellow-500' :
                     'bg-green-500'
                   }`}></div>
-                  <p className="text-xs text-gray-500">Min. 8 characters</p>
+                  <p className="text-xs text-gray-500">Min. 8 karakter</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-gray-300 font-medium flex items-center gap-2">
                   <Lock className="w-4 h-4 text-purple-400" />
-                  Confirm Password
+                  Konfirmasi Kata Sandi
                 </Label>
                 <div className="relative">
                   <Input
@@ -253,12 +253,12 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating Your Account...
+                    Membuat Akunmu...
                   </>
                 ) : (
                   <>
                     <Zap className="mr-2 h-5 w-5" />
-                    Start Your Journey
+                    Mulai Petualanganmu
                   </>
                 )}
               </Button>
@@ -266,9 +266,9 @@ export default function RegisterPage() {
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
 
               <p className="text-sm text-center text-gray-400">
-                Already have an account?{' '}
+                Sudah punya akun?{' '}
                 <Link href="/auth/login" className="text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text hover:from-purple-300 hover:to-pink-300 font-semibold transition-all">
-                  Login here
+                  Masuk di sini
                 </Link>
               </p>
 
@@ -277,18 +277,18 @@ export default function RegisterPage() {
                 className="text-sm text-center text-gray-500 hover:text-gray-300 transition-colors flex items-center justify-center gap-1 group"
               >
                 <Sparkles className="w-4 h-4 group-hover:text-yellow-400 transition-colors" />
-                Play as guest instead
+                Main sebagai tamu saja
               </Link>
 
               <div className="pt-4 flex items-center justify-center gap-4 text-xs text-gray-600">
                 <div className="flex items-center gap-1">
                   <Trophy className="w-3 h-3 text-yellow-500/50" />
-                  <span>Free to play</span>
+                  <span>Gratis dimainkan</span>
                 </div>
                 <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 text-purple-500/50" />
-                  <span>Earn rewards</span>
+                  <span>Dapat hadiah</span>
                 </div>
               </div>
             </CardFooter>

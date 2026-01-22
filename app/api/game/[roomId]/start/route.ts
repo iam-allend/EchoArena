@@ -9,9 +9,9 @@ export async function POST(
     const supabase = await createClient()
     const { roomId } = await context.params
 
-    console.log('🎮 Starting game for room:', roomId)
+    console.log('🎮 Memulai permainan untuk room:', roomId)
 
-    // Get room
+    // Dapatkan room
     const { data: room, error: roomError } = await supabase
       .from('game_rooms')
       .select('*, host_user_id')
@@ -19,28 +19,28 @@ export async function POST(
       .single()
 
     if (roomError || !room) {
-      throw new Error('Room not found')
+      throw new Error('Room tidak ditemukan')
     }
 
-    // ✅ Generate Agora channel name
-    // Format: agora-arena-<first 8 chars of roomId>
+    // ✅ Buat nama channel Agora
+    // Format: agora-arena-<8 karakter pertama roomId>
     const voiceChannelName = `agora-arena-${roomId.slice(0, 8)}`
 
-    console.log('🎤 Agora channel name:', voiceChannelName)
+    console.log('🎤 Nama channel Agora:', voiceChannelName)
 
-    // Update room status dengan voice channel name
+    // Perbarui status room dengan nama channel suara
     const { error: updateError } = await supabase
       .from('game_rooms')
       .update({
         status: 'playing',
         current_stage: 1,
-        voice_room_url: voiceChannelName, // ✅ Simpan channel name, bukan URL
+        voice_room_url: voiceChannelName, // ✅ Simpan nama channel, bukan URL
       })
       .eq('id', roomId)
 
     if (updateError) throw updateError
 
-    // Initialize turn queue for stage 1
+    // Inisialisasi antrean giliran untuk babak 1
     const { error: turnError } = await supabase.rpc('initialize_stage_turns', {
       p_room_id: roomId,
       p_stage_number: 1,
@@ -48,14 +48,14 @@ export async function POST(
 
     if (turnError) throw turnError
 
-    console.log('✅ Game started with Agora voice channel')
+    console.log('✅ Permainan dimulai dengan channel suara Agora')
 
     return NextResponse.json({
       success: true,
-      voiceChannelName, // Return channel name
+      voiceChannelName, // Kembalikan nama channel
     })
   } catch (error: any) {
-    console.error('❌ Start game error:', error)
+    console.error('❌ Kesalahan memulai permainan:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }

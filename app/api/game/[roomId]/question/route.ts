@@ -9,7 +9,7 @@ export async function GET(
     const supabase = await createClient()
     const { roomId } = await context.params
 
-    console.log('❓ Getting question for room:', roomId)
+    console.log('❓ Mengambil pertanyaan untuk room:', roomId)
 
     // Get room info
     const { data: room } = await supabase
@@ -18,7 +18,7 @@ export async function GET(
       .eq('id', roomId)
       .single()
 
-    if (!room) throw new Error('Room not found')
+    if (!room) throw new Error('Room tidak ditemukan')
 
     // ✅ Get difficulty based on stage
     const { data: difficultyData } = await supabase
@@ -28,7 +28,7 @@ export async function GET(
 
     const difficulty = difficultyData || 'medium'
 
-    console.log(`📊 Stage ${room.current_stage} → Difficulty: ${difficulty}`)
+    console.log(`📊 Babak ${room.current_stage} → Tingkat Kesulitan: ${difficulty}`)
 
     // ✅ Get random question (excluding used ones)
     const { data: questions, error: questionError } = await supabase
@@ -42,11 +42,11 @@ export async function GET(
 
     const question = questions?.[0]
     if (!question) {
-      console.error('❌ No more unused questions available!')
-      throw new Error('No questions available for this difficulty')
+      console.error('❌ Tidak ada lagi pertanyaan yang belum digunakan!')
+      throw new Error('Tidak ada pertanyaan tersedia untuk tingkat kesulitan ini')
     }
 
-    console.log('✅ Question fetched:', question.id, '- Difficulty:', question.difficulty)
+    console.log('✅ Pertanyaan diambil:', question.id, '- Tingkat Kesulitan:', question.difficulty)
 
     // ✅ Mark question as used
     await supabase
@@ -58,7 +58,7 @@ export async function GET(
       })
       .select()
 
-    console.log('📝 Question marked as used')
+    console.log('📝 Pertanyaan ditandai sebagai sudah digunakan')
 
     // Store in active_questions
     await supabase
@@ -93,7 +93,7 @@ export async function GET(
           },
         })
         
-        console.log('📡 Question broadcasted')
+        console.log('📡 Pertanyaan disiarkan')
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
@@ -106,7 +106,7 @@ export async function GET(
       question,
     })
   } catch (error: any) {
-    console.error('❌ Get question error:', error)
+    console.error('❌ Kesalahan pengambilan pertanyaan:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -9,7 +9,7 @@ export async function POST(
     const supabase = await createClient()
     const { roomId } = await context.params
 
-    console.log('➡️ Next stage for room:', roomId)
+    console.log('➡️ Babak selanjutnya untuk room:', roomId)
 
     const { data: room } = await supabase
       .from('game_rooms')
@@ -17,13 +17,13 @@ export async function POST(
       .eq('id', roomId)
       .single()
 
-    if (!room) throw new Error('Room not found')
+    if (!room) throw new Error('Room tidak ditemukan')
 
     const nextStage = room.current_stage + 1
 
     // Check if game finished
     if (nextStage > room.max_stages) {
-      console.log('🏁 Game finished!')
+      console.log('🏁 Permainan selesai!')
       
       await supabase
         .from('game_rooms')
@@ -53,7 +53,7 @@ export async function POST(
       })
     }
 
-    console.log(`📈 Moving to stage ${nextStage}/${room.max_stages}`)
+    console.log(`📈 Pindah ke babak ${nextStage}/${room.max_stages}`)
 
     // Update stage
     await supabase
@@ -67,7 +67,7 @@ export async function POST(
       p_stage_number: nextStage,
     })
 
-    console.log('✅ Stage initialized')
+    console.log('✅ Babak diinisialisasi')
 
     // ✅ BROADCAST stage complete
     const broadcastChannel = supabase.channel(`room:${roomId}:broadcast`)
@@ -83,7 +83,7 @@ export async function POST(
           },
         })
         
-        console.log('📡 Stage change broadcasted')
+        console.log('📡 Perubahan babak disiarkan')
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
@@ -97,7 +97,7 @@ export async function POST(
       nextStage,
     })
   } catch (error: any) {
-    console.error('❌ Next stage error:', error)
+    console.error('❌ Kesalahan babak selanjutnya:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

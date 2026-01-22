@@ -21,7 +21,7 @@ export default function JoinRoomPage() {
     setError('')
 
     if (!user) {
-      setError('Please login first')
+      setError('Silakan login terlebih dahulu')
       return
     }
 
@@ -40,13 +40,13 @@ export default function JoinRoomPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to join room')
+        throw new Error(data.error || 'Gagal bergabung ke room')
       }
 
       router.push(`/room/${data.room.id}`)
     } catch (error: any) {
       console.error('Join room error:', error)
-      setError(error.message || 'Failed to join room')
+      setError(error.message || 'Gagal bergabung ke room')
     } finally {
       setJoining(false)
     }
@@ -57,7 +57,7 @@ export default function JoinRoomPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
-          <p className="text-purple-200 font-medium">Loading...</p>
+          <p className="text-purple-200 font-medium">Memuat...</p>
         </div>
       </div>
     )
@@ -91,7 +91,7 @@ export default function JoinRoomPage() {
             className="mb-6 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Kembali ke Dashboard
           </Button>
 
           <Card className="border-0 bg-gray-900/80 backdrop-blur-xl shadow-2xl shadow-purple-500/20">
@@ -100,10 +100,10 @@ export default function JoinRoomPage() {
                 <DoorOpen className="w-10 h-10 text-white" />
               </div>
               <CardTitle className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                Join Room
+                Gabung Room
               </CardTitle>
               <CardDescription className="text-gray-400 text-base mt-2">
-                Enter the 6-character room code to join a game 🚪
+                Masukkan 6 karakter kode room untuk bergabung ke permainan 🚪
               </CardDescription>
             </CardHeader>
 
@@ -121,7 +121,7 @@ export default function JoinRoomPage() {
                 <div className="space-y-3">
                   <Label htmlFor="roomCode" className="text-gray-300 font-medium text-lg flex items-center gap-2">
                     <Hash className="w-5 h-5 text-blue-400" />
-                    Room Code
+                    Kode Room
                   </Label>
                   <Input
                     id="roomCode"
@@ -134,7 +134,7 @@ export default function JoinRoomPage() {
                   />
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                     <Users className="w-4 h-4" />
-                    <span>Get the code from your friend who created the room</span>
+                    <span>Dapatkan kode dari temanmu yang membuat room</span>
                   </div>
 
                   {/* Code Length Indicator */}
@@ -155,20 +155,20 @@ export default function JoinRoomPage() {
                 <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-2 border-blue-500/30 rounded-xl p-5 backdrop-blur-sm">
                   <h4 className="font-bold text-lg text-white mb-3 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-blue-400" />
-                    Quick Tips
+                    Tips Cepat
                   </h4>
                   <div className="space-y-2 text-gray-300 text-sm">
                     <div className="flex items-start gap-2">
                       <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5"></div>
-                      <span>Room codes are <strong className="text-white">6 characters</strong> (letters & numbers)</span>
+                      <span>Kode room terdiri dari <strong className="text-white">6 karakter</strong> (huruf & angka)</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-1.5"></div>
-                      <span>Ask the host to share the code from the lobby</span>
+                      <span>Minta host membagikan kode dari lobi</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5"></div>
-                      <span>You can join while the game is in <strong className="text-white">waiting</strong> status</span>
+                      <span>Kamu bisa bergabung saat permainan dalam status <strong className="text-white">menunggu</strong></span>
                     </div>
                   </div>
                 </div>
@@ -181,18 +181,18 @@ export default function JoinRoomPage() {
                   {joining ? (
                     <>
                       <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                      Joining Room...
+                      Bergabung ke Room...
                     </>
                   ) : (
                     <>
                       <DoorOpen className="mr-2 h-6 w-6" />
-                      Join Room
+                      Gabung Room
                     </>
                   )}
                 </Button>
 
                 <p className="text-center text-sm text-gray-500">
-                  Make sure your mic is ready for voice battles! 🎤
+                  Pastikan mikrofonmu siap untuk pertarungan suara! 🎤
                 </p>
               </div>
             </CardContent>

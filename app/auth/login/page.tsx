@@ -42,7 +42,7 @@ export default function LoginPage() {
       router.refresh()
     } catch (err: any) {
       console.error('Login error:', err)
-      setError(err.message || 'Login failed. Please check your credentials.')
+      setError(err.message || 'Login gagal. Silakan periksa kredensial Anda.')
     } finally {
       setLoading(false)
     }
@@ -72,10 +72,10 @@ export default function LoginPage() {
               <LogIn className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Welcome Back
+              Selamat Datang Kembali
             </CardTitle>
             <CardDescription className="text-gray-400 text-base">
-              Login to continue your journey in EchoArena 🎮
+              Masuk untuk melanjutkan petualanganmu di EchoArena 🎮
             </CardDescription>
           </CardHeader>
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="champion@echoarena.com"
+                  placeholder="juara@echoarena.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -109,7 +109,7 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-gray-300 font-medium flex items-center gap-2">
                   <Lock className="w-4 h-4 text-purple-400" />
-                  Password
+                  Kata Sandi
                 </Label>
                 <Input
                   id="password"
@@ -132,12 +132,12 @@ export default function LoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Logging in...
+                    Sedang Masuk...
                   </>
                 ) : (
                   <>
                     <LogIn className="mr-2 h-5 w-5" />
-                    Login to Arena
+                    Masuk ke Arena
                   </>
                 )}
               </Button>
@@ -145,9 +145,9 @@ export default function LoginPage() {
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
 
               <p className="text-sm text-center text-gray-400">
-                Don't have an account?{' '}
+                Belum punya akun?{' '}
                 <Link href="/auth/register" className="text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text hover:from-purple-300 hover:to-pink-300 font-semibold transition-all">
-                  Register here
+                  Daftar di sini
                 </Link>
               </p>
 
@@ -156,18 +156,18 @@ export default function LoginPage() {
                 className="text-sm text-center text-gray-500 hover:text-gray-300 transition-colors flex items-center justify-center gap-1 group"
               >
                 <Sparkles className="w-4 h-4 group-hover:text-yellow-400 transition-colors" />
-                Play as guest instead
+                Main sebagai tamu saja
               </Link>
 
               <div className="pt-4 flex items-center justify-center gap-4 text-xs text-gray-600">
                 <div className="flex items-center gap-1">
                   <Trophy className="w-3 h-3 text-yellow-500/50" />
-                  <span>Secure Login</span>
+                  <span>Login Aman</span>
                 </div>
                 <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 text-purple-500/50" />
-                  <span>Quick Access</span>
+                  <span>Akses Cepat</span>
                 </div>
               </div>
             </CardFooter>

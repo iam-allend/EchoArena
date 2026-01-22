@@ -73,7 +73,7 @@ export default function RoomLobbyPage() {
       await loadParticipants()
     } catch (error) {
       console.error('Load room error:', error)
-      alert('Room not found')
+      alert('Room tidak ditemukan')
       router.push('/dashboard')
     } finally {
       setLoading(false)
@@ -175,7 +175,7 @@ export default function RoomLobbyPage() {
   async function handleLeaveRoom() {
     try {
       if (!user?.id || !roomId) {
-        alert('Invalid user or room')
+        alert('User atau room tidak valid')
         return
       }
 
@@ -198,7 +198,7 @@ export default function RoomLobbyPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to leave room')
+        throw new Error(data.error || 'Gagal keluar dari room')
       }
 
       console.log('✅ Left room successfully')
@@ -207,18 +207,18 @@ export default function RoomLobbyPage() {
       
     } catch (error: any) {
       console.error('❌ Leave room error:', error)
-      alert(error.message || 'Failed to leave room')
+      alert(error.message || 'Gagal keluar dari room')
     }
   }
 
   async function handleStartGame() {
     if (!isHost) {
-      alert('Only the host can start the game')
+      alert('Hanya host yang bisa memulai permainan')
       return
     }
 
     if (participants.length < 2) {
-      alert('Need at least 2 players to start!')
+      alert('Butuh minimal 2 pemain untuk memulai!')
       return
     }
 
@@ -241,7 +241,7 @@ export default function RoomLobbyPage() {
 
     } catch (error: any) {
       console.error('❌ Start game error:', error)
-      alert(`Failed to start game: ${error.message}`)
+      alert(`Gagal memulai permainan: ${error.message}`)
       setStarting(false)
     }
   }
@@ -301,8 +301,8 @@ export default function RoomLobbyPage() {
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Battle Lobby</h1>
-                <p className="text-sm text-purple-300">Get ready for quiz battle!</p>
+                <h1 className="text-2xl font-bold text-white">Lobi Pertarungan</h1>
+                <p className="text-sm text-purple-300">Bersiaplah untuk kuis!</p>
               </div>
             </div>
             
@@ -324,7 +324,7 @@ export default function RoomLobbyPage() {
                 className="px-5 h-11 rounded-xl bg-red-500/10 backdrop-blur-xl border border-red-500/20 flex items-center justify-center hover:bg-red-500/20 transition-all hover:scale-105 shadow-lg"
               >
                 <LogOut className="w-4 h-4 text-red-400 mr-2" />
-                <span className="text-red-400 font-medium">Leave</span>
+                <span className="text-red-400 font-medium">Keluar</span>
               </button>
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function RoomLobbyPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-purple-300">
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium uppercase tracking-wider">Room Code</span>
+                  <span className="text-sm font-medium uppercase tracking-wider">Kode Room</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-black/30 rounded-2xl p-5 border border-purple-500/30">
@@ -361,15 +361,15 @@ export default function RoomLobbyPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-purple-300">
                   <Trophy className="w-4 h-4" />
-                  <span className="text-sm font-medium uppercase tracking-wider">Game Info</span>
+                  <span className="text-sm font-medium uppercase tracking-wider">Info Game</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-black/30 rounded-2xl p-4 border border-purple-500/20">
-                    <div className="text-purple-300 text-xs mb-1">Total Stages</div>
+                    <div className="text-purple-300 text-xs mb-1">Total Babak</div>
                     <div className="text-3xl font-bold text-white">{room.max_stages}</div>
                   </div>
                   <div className="bg-black/30 rounded-2xl p-4 border border-purple-500/20">
-                    <div className="text-purple-300 text-xs mb-1">Players</div>
+                    <div className="text-purple-300 text-xs mb-1">Pemain</div>
                     <div className="text-3xl font-bold text-white">{participants.length}<span className="text-xl text-purple-400">/8</span></div>
                   </div>
                 </div>
@@ -385,8 +385,8 @@ export default function RoomLobbyPage() {
                   <Users className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>
-                  <h3 className="text-yellow-300 font-semibold mb-1">Waiting for Players...</h3>
-                  <p className="text-yellow-200/80 text-sm">Share the room code with your friends! Need at least 2 players to start the battle.</p>
+                  <h3 className="text-yellow-300 font-semibold mb-1">Menunggu Pemain...</h3>
+                  <p className="text-yellow-200/80 text-sm">Bagikan kode room ke temanmu! Butuh minimal 2 pemain untuk memulai pertarungan.</p>
                 </div>
               </div>
             </div>
@@ -399,7 +399,7 @@ export default function RoomLobbyPage() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
                   <Users className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">Players Ready</h2>
+                <h2 className="text-2xl font-bold text-white">Pemain Siap</h2>
               </div>
               <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="text-white font-semibold">{participants.length}</span>
@@ -440,7 +440,7 @@ export default function RoomLobbyPage() {
                         </span>
                         {participant.user_id === user?.id && (
                           <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs font-medium">
-                            You
+                            Kamu
                           </span>
                         )}
                       </div>
@@ -450,7 +450,7 @@ export default function RoomLobbyPage() {
                           <span>Level {participant.user.level}</span>
                         </div>
                         <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                        <span className="text-green-400 font-medium">Ready</span>
+                        <span className="text-green-400 font-medium">Siap</span>
                       </div>
                     </div>
                   </div>
@@ -466,7 +466,7 @@ export default function RoomLobbyPage() {
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
                     <Users className="w-8 h-8 text-white/20" />
                   </div>
-                  <span className="text-white/40 font-medium">Waiting for player...</span>
+                  <span className="text-white/40 font-medium">Menunggu pemain...</span>
                 </div>
               ))}
             </div>
@@ -482,13 +482,13 @@ export default function RoomLobbyPage() {
               {starting ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Starting Battle...
+                  Memulai Pertarungan...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-6 h-6" />
-                  Start Quiz Battle
-                  {participants.length < 2 && ' (Need 2+ Players)'}
+                  Mulai Pertarungan Kuis
+                  {participants.length < 2 && ' (Butuh 2+ Pemain)'}
                 </>
               )}
             </button>
@@ -498,7 +498,7 @@ export default function RoomLobbyPage() {
             <div className="text-center py-8">
               <div className="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/20">
                 <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                <span className="text-white/80">Waiting for host to start the battle...</span>
+                <span className="text-white/80">Menunggu host memulai pertarungan...</span>
               </div>
             </div>
           )}
@@ -514,7 +514,7 @@ export default function RoomLobbyPage() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                   <Settings className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">Settings</h2>
+                <h2 className="text-2xl font-bold text-white">Pengaturan</h2>
               </div>
               <button
                 onClick={() => setShowSettingsPopup(false)}
@@ -528,8 +528,8 @@ export default function RoomLobbyPage() {
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-semibold mb-1">Sound Effects</h3>
-                    <p className="text-purple-300 text-sm">Toggle game sounds</p>
+                    <h3 className="text-white font-semibold mb-1">Efek Suara</h3>
+                    <p className="text-purple-300 text-sm">Aktifkan suara game</p>
                   </div>
                   <div className="w-12 h-6 rounded-full bg-green-500 relative cursor-pointer">
                     <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white"></div>
@@ -540,8 +540,8 @@ export default function RoomLobbyPage() {
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-semibold mb-1">Background Music</h3>
-                    <p className="text-purple-300 text-sm">Toggle music</p>
+                    <h3 className="text-white font-semibold mb-1">Musik Latar</h3>
+                    <p className="text-purple-300 text-sm">Aktifkan musik</p>
                   </div>
                   <div className="w-12 h-6 rounded-full bg-white/20 relative cursor-pointer">
                     <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white"></div>
@@ -552,8 +552,8 @@ export default function RoomLobbyPage() {
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-semibold mb-1">Notifications</h3>
-                    <p className="text-purple-300 text-sm">In-game notifications</p>
+                    <h3 className="text-white font-semibold mb-1">Notifikasi</h3>
+                    <p className="text-purple-300 text-sm">Notifikasi dalam game</p>
                   </div>
                   <div className="w-12 h-6 rounded-full bg-green-500 relative cursor-pointer">
                     <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white"></div>
@@ -566,7 +566,7 @@ export default function RoomLobbyPage() {
               onClick={() => setShowSettingsPopup(false)}
               className="w-full mt-6 h-12 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 font-semibold text-white transition-all shadow-lg"
             >
-              Close
+              Tutup
             </button>
           </div>
         </div>
@@ -580,8 +580,8 @@ export default function RoomLobbyPage() {
               <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <LogOut className="w-8 h-8 text-red-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Leave Room?</h2>
-              <p className="text-red-200/80">Are you sure you want to leave this battle room? You cannot rejoin once you leave.</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Keluar Room?</h2>
+              <p className="text-red-200/80">Apakah kamu yakin ingin keluar dari room ini? Kamu tidak dapat bergabung kembali setelah keluar.</p>
             </div>
 
             <div className="flex gap-3">
@@ -589,13 +589,13 @@ export default function RoomLobbyPage() {
                 onClick={() => setShowLeavePopup(false)}
                 className="flex-1 h-12 rounded-xl bg-white/10 hover:bg-white/20 font-semibold text-white transition-all border border-white/20"
               >
-                Cancel
+                Batal
               </button>
               <button
                 onClick={handleLeaveRoom}
                 className="flex-1 h-12 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 font-semibold text-white transition-all shadow-lg"
               >
-                Leave Room
+                Keluar Room
               </button>
             </div>
           </div>

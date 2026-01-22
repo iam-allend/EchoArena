@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     // Validate userId
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID required' },
+        { error: 'ID Pengguna diperlukan' },
         { status: 400 }
       )
     }
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     if (userError || !userExists) {
       return NextResponse.json(
-        { error: 'Invalid user' },
+        { error: 'Pengguna tidak valid' },
         { status: 401 }
       )
     }
@@ -69,9 +69,9 @@ export async function POST(request: Request) {
       },
     })
   } catch (error: any) {
-    console.error('Create room error:', error)
+    console.error('Kesalahan pembuatan room:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to create room' },
+      { error: error.message || 'Gagal membuat room' },
       { status: 500 }
     )
   }

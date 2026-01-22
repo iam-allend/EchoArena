@@ -45,9 +45,7 @@ export function useGameBroadcast({ roomId, onEvent, enabled = true }: UseGameBro
         console.log('✅ Broadcast channel ready')
       }
     })
-
     channelRef.current = channel
-
     return () => {
       console.log('🧹 Cleaning up broadcast channel')
       channel.unsubscribe()

@@ -16,7 +16,7 @@ export default function CreateRoomPage() {
 
   async function handleCreateRoom() {
     if (!user) {
-      alert('Please login first')
+      alert('Silakan login terlebih dahulu')
       return
     }
 
@@ -35,13 +35,13 @@ export default function CreateRoomPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create room')
+        throw new Error(data.error || 'Gagal membuat room')
       }
 
       router.push(`/room/${data.room.id}`)
     } catch (error: any) {
       console.error('Create room error:', error)
-      alert(error.message || 'Failed to create room')
+      alert(error.message || 'Gagal membuat room')
     } finally {
       setCreating(false)
     }
@@ -52,7 +52,7 @@ export default function CreateRoomPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
-          <p className="text-purple-200 font-medium">Loading...</p>
+          <p className="text-purple-200 font-medium">Memuat...</p>
         </div>
       </div>
     )
@@ -86,7 +86,7 @@ export default function CreateRoomPage() {
             className="mb-6 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Kembali ke Dashboard
           </Button>
 
 
@@ -96,10 +96,10 @@ export default function CreateRoomPage() {
                 <Users className="w-10 h-10 text-white" />
               </div>
               <CardTitle className="text-4xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
-                Create Room
+                Buat Room
               </CardTitle>
               <CardDescription className="text-gray-400 text-base mt-2">
-                Set up a new game room and invite your friends! 🎮
+                Siapkan room permainan baru dan undang temanmu! 🎮
               </CardDescription>
             </CardHeader>
 
@@ -109,7 +109,7 @@ export default function CreateRoomPage() {
                 <div className="space-y-3">
                   <Label className="text-gray-300 font-medium text-lg flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-purple-400" />
-                    Number of Stages
+                    Jumlah Babak
                   </Label>
                   <div className="grid grid-cols-3 gap-4">
                     {[5, 10, 15].map((num) => (
@@ -122,45 +122,45 @@ export default function CreateRoomPage() {
                             : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
                         }`}
                       >
-                        {num} Stages
+                        {num} Babak
                       </Button>
                     ))}
                   </div>
                   <p className="text-sm text-gray-500 flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    Each stage = all players answer 1 question
+                    Setiap babak = semua pemain menjawab 1 pertanyaan
                   </p>
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-2 border-blue-500/30 rounded-xl p-5 backdrop-blur-sm">
                   <h4 className="font-bold text-lg text-white mb-3 flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-blue-400" />
-                    Room Info
+                    Info Room
                   </h4>
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-3 text-gray-300">
                       <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
                         <Users className="w-4 h-4 text-purple-400" />
                       </div>
-                      <span>Max players: <strong className="text-white">8</strong></span>
+                      <span>Maksimal pemain: <strong className="text-white">8</strong></span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-300">
                       <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
                         <Heart className="w-4 h-4 text-red-400" />
                       </div>
-                      <span>Each player starts with <strong className="text-white">3 lives</strong> ❤️❤️❤️</span>
+                      <span>Mulai dengan <strong className="text-white">3 nyawa</strong> ❤️❤️❤️</span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-300">
                       <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
                         <Zap className="w-4 h-4 text-green-400" />
                       </div>
-                      <span>Turn-based: players take turns answering</span>
+                      <span>Sistem giliran: pemain menjawab bergantian</span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-300">
                       <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
                         <Mic className="w-4 h-4 text-blue-400" />
                       </div>
-                      <span>Voice chat enabled automatically</span>
+                      <span>Obrolan suara aktif otomatis</span>
                     </div>
                   </div>
                 </div>
@@ -175,18 +175,18 @@ export default function CreateRoomPage() {
                 {creating ? (
                   <>
                     <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                    Creating Room...
+                    Membuat Room...
                   </>
                 ) : (
                   <>
                     <Users className="mr-2 h-6 w-6" />
-                    Create Room
+                    Buat Room
                   </>
                 )}
               </Button>
 
               <p className="text-center text-sm text-gray-500">
-                You'll be the host and can start the game when ready 🎯
+                Kamu akan menjadi host dan bisa memulai permainan saat siap 🎯
               </p>
             </CardContent>
           </Card>

@@ -11,14 +11,14 @@ export async function GET(
     // ✅ FIX: Await params (Next.js 15+ requirement)
     const { roomId } = await context.params
     
-    console.log('📥 Get game state API called for room:', roomId)
+    console.log('📥 API ambil status permainan dipanggil untuk room:', roomId)
 
     // ✅ FIX: Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(roomId)) {
-      console.error('❌ Invalid UUID format:', roomId)
+      console.error('❌ Format UUID tidak valid:', roomId)
       return NextResponse.json(
-        { error: `Invalid room ID format: ${roomId}` },
+        { error: `Format ID room tidak valid: ${roomId}` },
         { status: 400 }
       )
     }
@@ -31,18 +31,18 @@ export async function GET(
       .single()
 
     if (roomError) {
-      console.error('❌ Room query error:', roomError)
+      console.error('❌ Kesalahan query room:', roomError)
       throw roomError
     }
 
     if (!room) {
       return NextResponse.json(
-        { error: 'Room not found' },
+        { error: 'Room tidak ditemukan' },
         { status: 404 }
       )
     }
 
-    console.log('✅ Room found:', room.room_code, 'Status:', room.status)
+    console.log('✅ Room ditemukan:', room.room_code, 'Status:', room.status)
 
     // Get participants with scores
     const { data: participants, error: partError } = await supabase
@@ -62,16 +62,16 @@ export async function GET(
       .order('total_score', { ascending: false })
 
     if (partError) {
-      console.error('❌ Participants query error:', partError)
+      console.error('❌ Kesalahan query peserta:', partError)
       throw partError
     }
 
-    console.log('✅ Participants loaded:', participants?.length || 0)
+    console.log('✅ Peserta dimuat:', participants?.length || 0)
 
     // Get current turn (if in playing state)
     let currentTurn = null
     if (room.status === 'playing') {
-      console.log('🎯 Getting current turn for stage:', room.current_stage)
+      console.log('🎯 Mengambil giliran saat ini untuk babak:', room.current_stage)
       
       const { data: turn, error: turnError } = await supabase
         .rpc('get_current_turn', {
@@ -80,12 +80,12 @@ export async function GET(
         })
 
       if (turnError) {
-        console.error('⚠️ Get current turn error:', turnError)
+        console.error('⚠️ Kesalahan ambil giliran saat ini:', turnError)
         // Don't throw, just log - turn might not exist yet
       }
 
       currentTurn = turn?.[0] || null
-      console.log('✅ Current turn:', currentTurn?.username || 'none')
+      console.log('✅ Giliran saat ini:', currentTurn?.username || 'tidak ada')
     }
 
     return NextResponse.json({
@@ -97,10 +97,10 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error('❌ Get game state error:', error)
+    console.error('❌ Kesalahan ambil status permainan:', error)
     return NextResponse.json(
       { 
-        error: error.message || 'Failed to get game state',
+        error: error.message || 'Gagal mengambil status permainan',
         details: error.details || null
       },
       { status: 500 }
