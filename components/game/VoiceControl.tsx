@@ -78,7 +78,7 @@ export function VoiceControl({
 
       const { client, audioTrack } = await AgoraManager.joinChannel(channelName, myUserId)
       if (!client) {
-        throw new Error('Agora client is null')
+        throw new Error('Klien Agora bernilai null')
       }
       
       // Setup event listeners
@@ -125,7 +125,7 @@ export function VoiceControl({
         console.log(`Connection state: ${prevState} → ${curState}`)
         if (curState === 'DISCONNECTED') {
           setIsConnected(false)
-          setError('Connection lost')
+          setError('Koneksi terputus')
         }
       })
 
@@ -140,7 +140,7 @@ export function VoiceControl({
 
     } catch (err: any) {
       console.error('❌ Failed to connect voice:', err)
-      setError(err.message || 'Failed to connect to voice')
+      setError(err.message || 'Gagal terhubung ke layanan suara')
       setIsConnecting(false)
       hasConnected.current = false
     }
@@ -174,7 +174,7 @@ export function VoiceControl({
     return (
       <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
         <p className="text-white text-sm text-center">
-          🔇 Voice not available for this game
+          🔇 Suara tidak tersedia untuk permainan ini
         </p>
       </Card>
     )
@@ -191,7 +191,7 @@ export function VoiceControl({
           className="w-full"
           size="sm"
         >
-          Retry Connection
+          Coba Hubungkan Lagi
         </Button>
       </Card>
     )
@@ -202,7 +202,7 @@ export function VoiceControl({
       <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
         <div className="flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin text-white" />
-          <p className="text-white text-sm">Connecting to voice...</p>
+          <p className="text-white text-sm">Menghubungkan suara...</p>
         </div>
       </Card>
     )
@@ -220,11 +220,11 @@ export function VoiceControl({
         <div className="flex items-center gap-2">
           <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
           <span className="text-white text-sm font-semibold">
-            {isConnected ? 'Voice Connected' : 'Disconnected'}
+            {isConnected ? 'Suara Terhubung' : 'Terputus'}
           </span>
         </div>
         <span className="text-purple-200 text-xs">
-          {participants.size + 1} in call
+          {participants.size + 1} dalam panggilan
         </span>
       </div>
 
@@ -237,7 +237,7 @@ export function VoiceControl({
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-white text-sm font-semibold">
-              Microphone Status
+              Status Mikrofon
             </span>
             {canSpeak && !isMuted && (
               <span className="text-green-400 text-xs font-bold animate-pulse">
@@ -247,10 +247,10 @@ export function VoiceControl({
           </div>
           <p className="text-xs text-gray-300 mt-1">
             {canSpeak && !isMuted 
-              ? '✅ Broadcasting - Others can hear you!' 
+              ? '✅ Menyiarkan - Orang lain bisa mendengarmu!' 
               : isMuted 
-                ? '🔇 Muted - Not broadcasting' 
-                : '⏸️ Standby'}
+                ? '🔇 Senyap - Tidak menyiarkan' 
+                : '⏸️ Siaga'}
           </p>
         </div>
 
@@ -269,17 +269,17 @@ export function VoiceControl({
           {!canSpeak ? (
             <>
               <Lock className="mr-2 h-4 w-4" />
-              Mic Locked
+              Mikrofon Terkunci
             </>
           ) : isMuted ? (
             <>
               <MicOff className="mr-2 h-4 w-4" />
-              Click to Unmute
+              Klik untuk Bicara
             </>
           ) : (
             <>
               <Mic className="mr-2 h-4 w-4" />
-              Click to Mute
+              Klik untuk Matikan
             </>
           )}
         </Button>
@@ -288,19 +288,19 @@ export function VoiceControl({
         {!isMyTurn && (
           <div className="flex items-center gap-2 text-yellow-400 text-xs justify-center bg-yellow-500/10 py-2 rounded">
             <VolumeX className="h-4 w-4" />
-            <span>Listening mode - Not your turn</span>
+            <span>Mode mendengarkan - Bukan giliranmu</span>
           </div>
         )}
 
         {isMyTurn && phase === 'reading' && (
           <div className="text-blue-400 text-xs text-center bg-blue-500/10 py-2 rounded">
-            📖 Reading phase - Mic will auto-unlock
+            📖 Fase membaca - Mikrofon akan terbuka otomatis
           </div>
         )}
 
         {isMyTurn && phase === 'answering' && (
           <div className="text-green-400 text-xs text-center bg-green-500/10 py-2 rounded font-semibold">
-            🎤 Answering phase - {isMuted ? 'Click button to speak!' : 'You are speaking!'}
+            🎤 Fase menjawab - {isMuted ? 'Klik tombol untuk bicara!' : 'Kamu sedang berbicara!'}
           </div>
         )}
       </div>

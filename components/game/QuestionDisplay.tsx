@@ -87,7 +87,7 @@ export function QuestionDisplay({
           <div className="flex items-center justify-center gap-3">
             <Zap className="h-6 w-6 text-green-300 animate-bounce" />
             <p className="text-white font-bold text-xl">
-              🎤 YOUR TURN - Answer Now!
+              🎤 GILIRANMU - Jawab Sekarang!
             </p>
             <Zap className="h-6 w-6 text-green-300 animate-bounce" />
           </div>
@@ -100,7 +100,7 @@ export function QuestionDisplay({
           <div className="flex items-center justify-center gap-3">
             <Eye className="h-5 w-5 text-blue-300" />
             <p className="text-blue-200 font-semibold text-lg">
-              👀 Spectator Mode - Watch & Listen
+              👀 Mode Penonton - Tonton & Dengarkan
             </p>
           </div>
         </Card>
@@ -133,7 +133,7 @@ export function QuestionDisplay({
           {isMyTurn && !showResult && (
             <div className="flex items-center gap-2 bg-green-500/20 px-3 py-1 rounded-full border border-green-400">
               <div className="h-2 w-2 rounded-full bg-green-500 animate-ping" />
-              <span className="text-green-300 text-sm font-bold">ACTIVE</span>
+              <span className="text-green-300 text-sm font-bold">AKTIF</span>
             </div>
           )}
         </div>
@@ -195,7 +195,7 @@ export function QuestionDisplay({
         {!isMyTurn && !showResult && (
           <div className="mt-6 text-center">
             <p className="text-purple-300 text-lg font-medium">
-              🎧 Listen to other players answering...
+              🎧 Dengarkan pemain lain menjawab...
             </p>
           </div>
         )}
