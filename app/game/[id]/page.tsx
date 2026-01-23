@@ -396,7 +396,7 @@ export default function GamePage() {
           isMyTurn: event.userId === user?.id
         })
         
-        // ✅ PERBAIKAN: Refresh state terlebih dahulu
+        // ✅ Refresh state terlebih dahulu
         const stateResp = await fetch(`/api/game/${roomId}/state`)
         const stateData = await stateResp.json()
         
@@ -409,11 +409,13 @@ export default function GamePage() {
           
           if (myParticipant?.status === 'eliminated') {
             console.log('💀 I am eliminated - spectator mode')
+            // ✅ Tetap tampilkan question untuk spectator
+            setCurrentQuestion(event.question)
             setPhase('waiting')
             return
           }
           
-          // ✅ Cek apakah ini giliran saya berdasarkan state terbaru
+          // ✅ Cek apakah ini giliran saya
           const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
           
           if (isMyTurn && event.userId === user?.id) {
@@ -422,13 +424,14 @@ export default function GamePage() {
             hasAnswered.current = false
             setPhase('reading')
           } else {
-            console.log('👀 Not my turn - spectating')
-            // ❌ JANGAN set question untuk user lain
+            console.log('👀 Spectating - show question but disabled')
+            // ✅ PERBAIKAN: Tampilkan question untuk spectator
+            setCurrentQuestion(event.question)
             setPhase('waiting')
           }
         }
         break
-
+        
       case 'ANSWER_SUBMITTED':
         console.log('✍️ Answer submitted by:', event.userId)
         
