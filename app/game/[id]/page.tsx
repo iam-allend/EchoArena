@@ -390,25 +390,49 @@ export default function GamePage() {
 
     switch (event.type) {
       case 'QUESTION_LOADED':
-        console.log('📖 Question loaded event')
+        console.log('📖 Question loaded event', {
+          questionUserId: event.userId,
+          myUserId: user?.id,
+          isMyTurn: event.userId === user?.id
+        })
         
-        // ✅ Only set question if it's for ME
-        if (event.userId === user?.id) {
-          setCurrentQuestion(event.question)
-          hasAnswered.current = false
+        // ✅ PERBAIKAN: Refresh state terlebih dahulu
+        const stateResp = await fetch(`/api/game/${roomId}/state`)
+        const stateData = await stateResp.json()
+        
+        if (stateData.success) {
+          setGameState(stateData.game)
           
-          console.log('✅ My turn - start reading')
-          setPhase('reading')
-        } else {
-          console.log('👀 Question is for another user, show for spectating')
-          setCurrentQuestion(event.question)
-          setPhase('waiting')
+          const myParticipant = stateData.game.participants.find(
+            (p: any) => p.user_id === user?.id
+          )
+          
+          if (myParticipant?.status === 'eliminated') {
+            console.log('💀 I am eliminated - spectator mode')
+            setPhase('waiting')
+            return
+          }
+          
+          // ✅ Cek apakah ini giliran saya berdasarkan state terbaru
+          const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
+          
+          if (isMyTurn && event.userId === user?.id) {
+            console.log('✅ My turn - start reading')
+            setCurrentQuestion(event.question)
+            hasAnswered.current = false
+            setPhase('reading')
+          } else {
+            console.log('👀 Not my turn - spectating')
+            // ❌ JANGAN set question untuk user lain
+            setPhase('waiting')
+          }
         }
         break
 
       case 'ANSWER_SUBMITTED':
         console.log('✍️ Answer submitted by:', event.userId)
         
+        // ✅ PERBAIKAN: Refresh state dan cek giliran
         const answerResp = await fetch(`/api/game/${roomId}/state`)
         const answerData = await answerResp.json()
         
@@ -420,25 +444,31 @@ export default function GamePage() {
           )
           
           if (myParticipant?.status === 'eliminated') {
-            console.log('💀 Eliminated - stay in spectator mode')
+            console.log('💀 Eliminated - spectator mode')
             setPhase('waiting')
             return
           }
           
+          // ✅ Cek apakah sekarang giliran saya
           const nowMyTurn = answerData.game.currentTurn?.user_id === user?.id
           
           if (nowMyTurn && !hasAnswered.current) {
-            console.log('🎯 Now my turn!')
+            console.log('🎯 Now my turn! Loading my question...')
             setPhase('waiting')
             setCurrentQuestion(null)
             
+            // ✅ Tunggu sebentar agar turn queue ter-update di database
             setTimeout(() => {
               loadQuestion()
-            }, 500)
+            }, 1000) // Increase dari 500ms ke 1000ms
+          } else {
+            console.log('👀 Still waiting for my turn')
+            setPhase('waiting')
+            setCurrentQuestion(null)
           }
         }
         break
-
+          
       case 'PLAYER_ELIMINATED':
         console.log('💀 Player eliminated:', event.username)
         
@@ -594,7 +624,7 @@ useEffect(() => {
 
   async function loadQuestion() {
     try {
-      console.log('❓ Loading NEW question...')
+      console.log('❓ Loading NEW question for user:', user?.id)
       
       const response = await fetch(`/api/game/${roomId}/question`)
       
@@ -609,11 +639,11 @@ useEffect(() => {
         throw new Error(data.error || 'Question load failed')
       }
 
-      console.log('✅ Question API called successfully')
+      console.log('✅ Question API called successfully for question ID:', data.question?.id)
     } catch (error: any) {
-      console.error('❌ Load question error:', error)
+      console.error('❌ Load question error:', error.message)
       
-      // ✅ Retry after 2 seconds
+      // ✅ Retry dengan backoff
       setTimeout(() => {
         console.log('🔄 Retrying question load...')
         loadQuestion()

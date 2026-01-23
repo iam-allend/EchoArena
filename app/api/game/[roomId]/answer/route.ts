@@ -88,9 +88,9 @@ export async function POST(
 
     console.log('📊 Stage complete:', stageComplete)
 
-    // ✅ BROADCAST with retry logic
-    const broadcastChannel = supabase.channel(`room:${roomId}:answers`)
-    
+    // ✅ Gunakan channel yang sama dengan question
+    const broadcastChannel = supabase.channel(`room:${roomId}:broadcast`)
+
     await broadcastChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await broadcastChannel.send({
@@ -100,12 +100,12 @@ export async function POST(
             type: 'ANSWER_SUBMITTED',
             userId,
             stageNumber,
-            wasEliminated, // ✅ Include elimination flag
+            wasEliminated,
           },
         })
         
         console.log('📡 Answer broadcasted')
-        setTimeout(() => supabase.removeChannel(broadcastChannel), 2000) // ✅ Longer timeout
+        setTimeout(() => supabase.removeChannel(broadcastChannel), 1000)
       }
     })
 

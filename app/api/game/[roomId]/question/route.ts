@@ -111,8 +111,10 @@ export async function GET(
       })
 
     // ✅ BROADCAST via Realtime
+    console.log('📡 Broadcasting question for user:', currentUserId)
+
     const broadcastChannel = supabase.channel(`room:${roomId}:broadcast`)
-    
+
     await broadcastChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await broadcastChannel.send({
@@ -122,17 +124,18 @@ export async function GET(
             type: 'QUESTION_LOADED',
             question: question,
             stageNumber: room.current_stage,
-            userId: currentUserId,
+            userId: currentUserId, // ✅ Kirim userId yang benar
           },
         })
         
-        console.log('📡 Pertanyaan disiarkan untuk user:', currentUserId)
+        console.log('📡 Question broadcasted for user:', currentUserId)
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)
         }, 1000)
       }
     })
+
 
     return NextResponse.json({
       success: true,
