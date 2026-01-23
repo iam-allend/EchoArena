@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 export type GameEvent = 
-  | { type: 'QUESTION_LOADED'; question: any; stageNumber: number }
+  | { type: 'QUESTION_LOADED'; question: any; stageNumber: number; userId: string } // ✅ Add userId
   | { type: 'TURN_CHANGED'; turn: any; stageNumber: number }
-  | { type: 'ANSWER_SUBMITTED'; userId: string; stageNumber: number }
-  | { type: 'PLAYER_ELIMINATED'; userId: string; username: string } // ✅ NEW
+  | { type: 'ANSWER_SUBMITTED'; userId: string; stageNumber: number; wasEliminated?: boolean }
+  | { type: 'PLAYER_ELIMINATED'; userId: string; username: string }
   | { type: 'STAGE_COMPLETE'; nextStage: number }
   | { type: 'GAME_FINISHED' }
 
@@ -29,11 +29,10 @@ export function useGameBroadcast({ roomId, onEvent, enabled = true }: UseGameBro
 
     const channel = supabase.channel(`room:${roomId}:broadcast`, {
       config: {
-        broadcast: { self: true }, // Receive own messages
+        broadcast: { self: true },
       },
     })
 
-    // Listen to all game events
     channel.on('broadcast', { event: 'game-event' }, ({ payload }) => {
       console.log('📨 Broadcast received:', payload.type)
       onEvent(payload as GameEvent)
@@ -45,14 +44,15 @@ export function useGameBroadcast({ roomId, onEvent, enabled = true }: UseGameBro
         console.log('✅ Broadcast channel ready')
       }
     })
+
     channelRef.current = channel
+
     return () => {
       console.log('🧹 Cleaning up broadcast channel')
       channel.unsubscribe()
     }
   }, [roomId, enabled, onEvent])
 
-  // Function to send events
   const broadcast = async (event: GameEvent) => {
     if (!channelRef.current) {
       console.error('❌ Channel not ready')

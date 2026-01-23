@@ -11,6 +11,36 @@ export async function GET(
 
     console.log('❓ Mengambil pertanyaan untuk room:', roomId)
 
+    // ✅ Get current user from turn queue
+    let currentUserId: string
+
+    const { data: currentTurn, error: turnError } = await supabase
+      .rpc('get_current_turn', {
+        p_room_id: roomId
+      })
+
+    if (turnError || !currentTurn || currentTurn.length === 0) {
+      console.error('❌ No active turn, using fallback:', turnError)
+      
+      // ✅ FALLBACK: Get first active participant
+      const { data: participants } = await supabase
+        .from('room_participants')
+        .select('user_id')
+        .eq('room_id', roomId)
+        .eq('status', 'active')
+        .order('joined_at', { ascending: true })
+        .limit(1)
+
+      if (!participants || participants.length === 0) {
+        throw new Error('No active participants found')
+      }
+
+      console.log('✅ Using fallback user:', participants[0].user_id)
+      currentUserId = participants[0].user_id
+    } else {
+      currentUserId = currentTurn[0].user_id
+    }
+
     // Get room info
     const { data: room } = await supabase
       .from('game_rooms')
@@ -28,14 +58,15 @@ export async function GET(
 
     const difficulty = difficultyData || 'medium'
 
-    console.log(`📊 Babak ${room.current_stage} → Tingkat Kesulitan: ${difficulty}`)
+    console.log(`📊 Babak ${room.current_stage} → User: ${currentUserId} → Tingkat Kesulitan: ${difficulty}`)
 
-    // ✅ Get random question (excluding used ones)
+    // ✅ Get random question (excluding used ones FOR THIS USER)
     const { data: questions, error: questionError } = await supabase
-      .rpc('get_random_question', {
+      .rpc('get_random_question_for_user', {
         p_category_id: null,
         p_difficulty: difficulty,
-        p_room_id: roomId // ✅ Pass room_id to exclude used questions
+        p_room_id: roomId,
+        p_user_id: currentUserId
       })
 
     if (questionError) throw questionError
@@ -48,23 +79,24 @@ export async function GET(
 
     console.log('✅ Pertanyaan diambil:', question.id, '- Tingkat Kesulitan:', question.difficulty)
 
-    // ✅ Mark question as used
+    // ✅ Mark question as used FOR THIS USER
     await supabase
       .from('room_used_questions')
       .insert({
         room_id: roomId,
         question_id: question.id,
-        stage_number: room.current_stage
+        stage_number: room.current_stage,
+        user_id: currentUserId
       })
-      .select()
 
-    console.log('📝 Pertanyaan ditandai sebagai sudah digunakan')
+    console.log('📝 Pertanyaan ditandai sebagai sudah digunakan untuk user:', currentUserId)
 
-    // Store in active_questions
+    // ✅ Store in active_questions PER USER
     await supabase
       .from('active_questions')
       .upsert({
         room_id: roomId,
+        user_id: currentUserId,
         stage_number: room.current_stage,
         question_id: question.id,
         question_text: question.question_text,
@@ -75,7 +107,7 @@ export async function GET(
         difficulty: question.difficulty,
         expires_at: new Date(Date.now() + 30000).toISOString(),
       }, {
-        onConflict: 'room_id,stage_number'
+        onConflict: 'room_id,user_id'
       })
 
     // ✅ BROADCAST via Realtime
@@ -90,10 +122,11 @@ export async function GET(
             type: 'QUESTION_LOADED',
             question: question,
             stageNumber: room.current_stage,
+            userId: currentUserId,
           },
         })
         
-        console.log('📡 Pertanyaan disiarkan')
+        console.log('📡 Pertanyaan disiarkan untuk user:', currentUserId)
         
         setTimeout(() => {
           supabase.removeChannel(broadcastChannel)

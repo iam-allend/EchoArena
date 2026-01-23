@@ -391,34 +391,18 @@ export default function GamePage() {
     switch (event.type) {
       case 'QUESTION_LOADED':
         console.log('📖 Question loaded event')
-        setCurrentQuestion(event.question)
-        hasAnswered.current = false
         
-        const stateResp = await fetch(`/api/game/${roomId}/state`)
-        const stateData = await stateResp.json()
-        
-        if (stateData.success) {
-          setGameState(stateData.game)
+        // ✅ Only set question if it's for ME
+        if (event.userId === user?.id) {
+          setCurrentQuestion(event.question)
+          hasAnswered.current = false
           
-          const myParticipant = stateData.game.participants.find(
-            (p: any) => p.user_id === user?.id
-          )
-          
-          if (myParticipant?.status === 'eliminated') {
-            console.log('💀 I am eliminated - spectator mode')
-            setPhase('waiting')
-            return
-          }
-          
-          const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
-          
-          if (isMyTurn) {
-            console.log('✅ My turn - start reading')
-            setPhase('reading')
-          } else {
-            console.log('👀 Spectating')
-            setPhase('waiting')
-          }
+          console.log('✅ My turn - start reading')
+          setPhase('reading')
+        } else {
+          console.log('👀 Question is for another user, show for spectating')
+          setCurrentQuestion(event.question)
+          setPhase('waiting')
         }
         break
 
@@ -582,10 +566,11 @@ useEffect(() => {
         .from('active_questions')
         .select('*')
         .eq('room_id', roomId)
+        .eq('user_id', user?.id) // ✅ Filter by user_id!
         .maybeSingle()
 
       if (data) {
-        console.log('✅ Found active question:', data.question_id)
+        console.log('✅ Found MY active question:', data.question_id)
         setCurrentQuestion({
           id: data.question_id,
           question_text: data.question_text,
@@ -597,6 +582,7 @@ useEffect(() => {
         })
         setPhase('waiting')
       } else {
+        console.log('👀 No question for me, spectating...')
         setPhase('waiting')
       }
     } catch (error) {
@@ -605,19 +591,33 @@ useEffect(() => {
     }
   }
 
+
   async function loadQuestion() {
     try {
       console.log('❓ Loading NEW question...')
       
       const response = await fetch(`/api/game/${roomId}/question`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to load question')
+      }
+      
       const data = await response.json()
 
-      if (!data.success) throw new Error(data.error)
+      if (!data.success) {
+        throw new Error(data.error || 'Question load failed')
+      }
 
-      console.log('✅ Question API called (will broadcast)')
+      console.log('✅ Question API called successfully')
     } catch (error: any) {
       console.error('❌ Load question error:', error)
-      alert('Failed to load question')
+      
+      // ✅ Retry after 2 seconds
+      setTimeout(() => {
+        console.log('🔄 Retrying question load...')
+        loadQuestion()
+      }, 2000)
     }
   }
 
