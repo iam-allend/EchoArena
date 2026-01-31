@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { createGuestAccount, getGuestAccountFromStorage } from '@/lib/auth/guest'
 import { createClient } from '@/lib/supabase/client'
 
+import { LevelSelector } from '@/components/learn/LevelSelector'
+import { subjects, Subject } from '@/lib/data/subjects'
+
 import { MusicControl } from '@/components/ui/MusicControl'
 
 
@@ -32,6 +35,8 @@ export default function Home() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
 
   useEffect(() => {
     checkExistingAuth()
@@ -226,16 +231,11 @@ export default function Home() {
               Pilih dari berbagai mata pelajaran dan mulai perjalanan belajarmu
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { emoji: '📊', title: 'Matematika', desc: 'Aljabar, Geometri, Kalkulus & lainnya', count: '120 Kuis', color: 'yellow' },
-                { emoji: '🔬', title: 'Sains', desc: 'Topik Fisika, Kimia, Biologi', count: '95 Kuis', color: 'green' },
-                { emoji: '📚', title: 'Sejarah', desc: 'Peristiwa dunia, peradaban & budaya', count: '78 Kuis', color: 'blue' },
-                { emoji: '📖', title: 'Sastra', desc: 'Pemahaman bacaan & analisis', count: '64 Kuis', color: 'purple' }
-              ].map((cat, i) => (
+              {subjects.map((cat, i) => (
                 <div
                   key={i}
-                  className={`group bg-gradient-to-br from-${cat.color}-500/20 to-${cat.color}-600/10 border-2 border-${cat.color}-500/30 rounded-2xl p-5 sm:p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer`}
-                >
+                  onClick={() => setSelectedSubject(cat)} // ✅ Tambahkan onClick
+                  className={`group bg-gradient-to-br from-${cat.color}-500/20 to-${cat.color}-600/10 border-2 border-${cat.color}-500/30 rounded-2xl p-5 sm:p-6 backdrop-blur-sm hover:scale-105 transition-all cursor-pointer`}>
                   <div className="w-full h-36 sm:h-40 bg-black/20 rounded-xl mb-4 flex items-center justify-center">
                     <span className="text-5xl sm:text-6xl">{cat.emoji}</span>
                   </div>
@@ -248,6 +248,13 @@ export default function Home() {
                 </div>
               ))}
             </div>
+            {selectedSubject && (
+              <LevelSelector
+                subject={selectedSubject}
+                onClose={() => setSelectedSubject(null)}
+              />
+            )}
+
           </div>
 
           {/* Why Choose */}
