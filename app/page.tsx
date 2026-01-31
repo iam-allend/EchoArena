@@ -240,7 +240,7 @@ export default function Home() {
                     <span className="text-5xl sm:text-6xl">{cat.emoji}</span>
                   </div>
                   <h3 className={`text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-${cat.color}-400 transition-colors`}>{cat.title}</h3>
-                  <p className="text-gray-300 text-sm mb-3">{cat.desc}</p>
+                  <p className="text-gray-300 text-sm mb-3">{cat.description}</p>
                   <div className="flex items-center justify-between text-sm text-gray-400">
                     <span>{cat.count}</span>
                     <Sparkles className={`w-4 h-4 text-${cat.color}-400`} />
