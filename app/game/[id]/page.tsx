@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useGameBroadcast, GameEvent } from '@/hooks/useGameBroadcast'
@@ -28,254 +28,405 @@ interface Question {
 
 // ===== LEADERBOARD COMPONENT =====
 function ModernLeaderboard({ 
-  participants, 
-  myUserId, 
-  roomCode, 
-  currentStage, 
-  maxStages,
-  currentTurn 
-}: any) {
-  const [showPopup, setShowPopup] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+    participants, 
+    myUserId, 
+    roomCode, 
+    currentStage, 
+    maxStages,
+    currentTurn 
+  }: any) {
+    const [showPopup, setShowPopup] = useState(false)
+    const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+    const [stars, setStars] = useState<Array<{top: string, left: string, delay: string, duration: string}>>([])
 
+    useEffect(() => {
+      const generatedStars = [...Array(20)].map(() => ({
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        delay: `${Math.random() * 2}s`,
+        duration: `${2 + Math.random() * 3}s`
+      }))
+      setStars(generatedStars)
+    }, [])
 
-  const sortedParticipants = [...participants]
-    .filter((p: any) => p.status === 'active')
-    .sort((a: any, b: any) => b.total_score - a.total_score)
+    // ✅ PERBAIKAN TOTAL: Proper sorting dan ranking
+    const rankedParticipants = useMemo(() => {
+      // Filter active players only
+      const activePlayers = participants.filter((p: any) => p.status === 'active')
+      
+      if (activePlayers.length === 0) return []
+      
+      // Sort by score DESC, then lives DESC, then username ASC
+      const sorted = [...activePlayers].sort((a: any, b: any) => {
+        if (b.total_score !== a.total_score) {
+          return b.total_score - a.total_score
+        }
+        if (b.lives_remaining !== a.lives_remaining) {
+          return b.lives_remaining - a.lives_remaining
+        }
+        return a.user.username.localeCompare(b.user.username)
+      })
+      
+      // ✅ FIX: Assign ranks properly (handle ties)
+      const withRanks = []
+      let currentRank = 1
+      
+      for (let i = 0; i < sorted.length; i++) {
+        const player = sorted[i]
+        
+        // Jika bukan player pertama, cek apakah skornya sama dengan player sebelumnya
+        if (i > 0) {
+          const prevPlayer = sorted[i - 1]
+          // Jika skor berbeda, rank naik sesuai posisi
+          if (player.total_score !== prevPlayer.total_score) {
+            currentRank = i + 1
+          }
+          // Jika skor sama, rank tetap sama (tie)
+        }
+        
+        withRanks.push({ ...player, rank: currentRank })
+      }
+      
+      return withRanks
+    }, [participants])
 
-  const top3 = sortedParticipants.slice(0, 3)
-  const restOfPlayers = sortedParticipants.slice(3)
+    // ✅ Get unique top 3 ranks
+    const uniqueRanks = useMemo(() => {
+      const ranks = [...new Set(rankedParticipants.map(p => p.rank))]
+      return ranks.slice(0, 3)
+    }, [rankedParticipants])
 
-  const handlePlayerClick = (player: any) => {
-    setSelectedPlayer(player)
-    setShowPopup(true)
-  }
+    // ✅ Group players by rank
+    const playersByRank = useMemo(() => {
+      const groups: { [key: number]: any[] } = {}
+      rankedParticipants.forEach(player => {
+        if (!groups[player.rank]) {
+          groups[player.rank] = []
+        }
+        groups[player.rank].push(player)
+      })
+      return groups
+    }, [rankedParticipants])
 
-  const closePopup = () => {
-    setShowPopup(false)
-    setSelectedPlayer(null)
-  }
+    // ✅ Podium players (1 representative per rank, or null if not exist)
+    const podiumPlayers = useMemo(() => {
+      return [
+        playersByRank[1]?.[0] || null,  // Rank 1
+        playersByRank[2]?.[0] || null,  // Rank 2
+        playersByRank[3]?.[0] || null,  // Rank 3
+      ]
+    }, [playersByRank])
+
+    // ✅ Rest of players (rank 4+)
+    const restOfPlayers = useMemo(() => {
+      return rankedParticipants.filter(p => p.rank > 3)
+    }, [rankedParticipants])
+
+    // ✅ Check if all players have 0 score
+    const allPlayersZeroScore = useMemo(() => {
+      return rankedParticipants.every(p => p.total_score === 0)
+    }, [rankedParticipants])
+
+    const handlePlayerClick = (player: any) => {
+      setSelectedPlayer(player)
+      setShowPopup(true)
+    }
+
+    const closePopup = () => {
+      setShowPopup(false)
+      setSelectedPlayer(null)
+    }
 
   return (
     <>
       <Card className="bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40 backdrop-blur-xl border-2 border-purple-500/30 overflow-hidden relative">
-  {/* Animated Stars Background */}
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(20)].map((_, i) => (
-      <div
-        key={`star-${i}`}
-        className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-        style={{
-          top: `${Math.random() * 100}%`,
-          left: `${Math.random() * 100}%`,
-          animationDelay: `${Math.random() * 2}s`,
-          animationDuration: `${2 + Math.random() * 3}s`,
-        }}
-      />
-    ))}
-  </div>
-
-  {/* Header */}
-  <div className="relative p-4 md:p-6 border-b border-purple-500/30">
-    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-      <div className="flex items-center gap-2">
-        <Trophy className="h-5 w-5 md:h-6 md:w-6 text-yellow-400" />
-        <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400">
-          Leaderboard
-        </h2>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="px-2 md:px-3 py-1 bg-purple-500/30 rounded-full border border-purple-400/50">
-          <p className="text-xs text-purple-200">
-            Stage {currentStage}/{maxStages}
-          </p>
+        {/* Animated Stars Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {stars.map((star, i) => (
+            <div
+              key={`star-${i}`}
+              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
+              style={{
+                top: star.top,
+                left: star.left,
+                animationDelay: star.delay,
+                animationDuration: star.duration,
+              }}
+            />
+          ))}   
         </div>
-        <div className="px-2 md:px-3 py-1 bg-blue-500/30 rounded-full border border-blue-400/50">
-          <p className="text-xs text-blue-200">{roomCode}</p>
-        </div>
-      </div>
-    </div>
 
-    {/* Current Turn Indicator */}
-    {currentTurn && (
-      <div className="flex items-center gap-2 text-sm">
-        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-        <span className="text-gray-300">
-          Turn: <span className="text-white font-semibold">{currentTurn.username}</span>
-        </span>
-      </div>
-    )}
-  </div>
-
-  {/* Podium - Top 3 */}
-  <div className="relative p-4 md:p-6">
-    <div className="flex items-end justify-center gap-2 md:gap-4 mb-6">
-      {/* 2nd Place */}
-      {top3[1] && (
-        <div 
-          className="flex flex-col items-center cursor-pointer transform hover:scale-105 transition-all duration-300 w-24 md:w-32"
-          onClick={() => handlePlayerClick(top3[1])}
-        >
-          <div className="relative mb-2">
-            <div className="absolute inset-0 bg-gray-400 rounded-full blur-lg opacity-60 animate-pulse" />
-            <div className="relative w-14 h-14 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-gray-300 via-gray-400 to-gray-600 flex items-center justify-center border-3 md:border-4 border-gray-300 shadow-xl">
-              <Crown className="h-6 w-6 md:h-10 md:w-10 text-gray-700" />
+        {/* Header */}
+        <div className="relative p-4 md:p-6 border-b border-purple-500/30">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 md:h-6 md:w-6 text-yellow-400" />
+              <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400">
+                Leaderboard
+              </h2>
             </div>
-            <div className="absolute -top-1 -right-1 w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-gray-200 to-gray-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-              <span className="text-xs md:text-sm font-bold text-gray-800">2</span>
+            <div className="flex items-center gap-2">
+              <div className="px-2 md:px-3 py-1 bg-purple-500/30 rounded-full border border-purple-400/50">
+                <p className="text-xs text-purple-200">
+                  Stage {currentStage}/{maxStages}
+                </p>
+              </div>
+              <div className="px-2 md:px-3 py-1 bg-blue-500/30 rounded-full border border-blue-400/50">
+                <p className="text-xs text-blue-200">{roomCode}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-500/30 to-gray-700/40 backdrop-blur-md border-2 border-gray-400/50 rounded-xl md:rounded-2xl p-2 md:p-3 w-full text-center shadow-xl">
-            <p className="text-xs md:text-sm font-bold text-white truncate mb-1">
-              {top3[1].user.username}
-            </p>
-            <p className="text-lg md:text-2xl font-bold text-gray-200 mb-0.5">
-              {top3[1].total_score}
-            </p>
-            <p className="text-xs text-gray-300">pts</p>
-            <div className="flex gap-0.5 justify-center mt-1">
-              {[...Array(3)].map((_, i) => (
-                <span key={i} className={`text-xs ${i < top3[1].lives ? 'opacity-100' : 'opacity-30'}`}>
-                  ❤️
-                </span>
-              ))}
+          {/* Current Turn Indicator */}
+          {currentTurn && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-gray-300">
+                Turn: <span className="text-white font-semibold">{currentTurn.username}</span>
+              </span>
             </div>
-          </div>
-
-          <div className="mt-2 h-16 md:h-24 w-full bg-gradient-to-t from-gray-600/50 to-gray-500/30 rounded-t-xl md:rounded-t-2xl border-2 border-gray-400/30 border-b-0" />
+          )}
         </div>
-      )}
 
-      {/* 1st Place */}
-      {top3[0] && (
-        <div 
-          className="flex flex-col items-center cursor-pointer transform hover:scale-105 transition-all duration-300 -mt-4 w-28 md:w-36 z-10"
-          onClick={() => handlePlayerClick(top3[0])}
-        >
-          <div className="absolute w-24 h-24 md:w-32 md:h-32 bg-yellow-400/30 rounded-full blur-2xl animate-pulse" />
-          
-          <div className="relative mb-3 z-10">
-            <div className="absolute inset-0 bg-yellow-400 rounded-full blur-xl opacity-70 animate-pulse" />
-            <div className="relative w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-yellow-300 via-yellow-500 to-orange-500 flex items-center justify-center border-3 md:border-4 border-yellow-200 shadow-2xl">
-              <Crown className="h-8 w-8 md:h-12 md:w-12 text-yellow-900 animate-bounce" />
+        {/* Content */}
+        <div className="relative p-4 md:p-6">
+          {/* ✅ Show message when all players have 0 score */}
+          {allPlayersZeroScore && (
+            <div className="mb-6 p-4 bg-blue-500/20 rounded-xl border border-blue-400/30 text-center">
+              <div className="text-4xl mb-2">🎮</div>
+              <p className="text-blue-200 text-sm font-semibold mb-1">
+                Game Just Started!
+              </p>
+              <p className="text-blue-300 text-xs">
+                Play to earn points and climb the leaderboard!
+              </p>
             </div>
-            <div className="absolute -top-2 -right-1 w-7 h-7 md:w-10 md:h-10 bg-gradient-to-br from-yellow-300 to-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-xl animate-pulse">
-              <span className="text-sm md:text-base font-bold text-yellow-900">1</span>
-            </div>
-            <Star className="absolute -top-4 md:-top-6 left-1/2 -translate-x-1/2 h-5 w-5 md:h-8 md:w-8 text-yellow-300 animate-spin" style={{ animationDuration: '4s' }} />
-          </div>
+          )}
 
-          <div className="bg-gradient-to-br from-yellow-500/40 to-orange-600/40 backdrop-blur-md border-2 md:border-3 border-yellow-300/60 rounded-xl md:rounded-2xl p-3 md:p-4 w-full text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shine" />
+          {/* ✅ Podium - Only show if NOT all zero */}
+          {!allPlayersZeroScore && uniqueRanks.length > 0 && (
+            <div className="flex items-end justify-center gap-2 md:gap-4 mb-6">
+              {/* 2nd Place */}
+              {podiumPlayers[1] && (
+                <PodiumCard 
+                  player={podiumPlayers[1]} 
+                  rank={2} 
+                  onClick={() => handlePlayerClick(podiumPlayers[1])}
+                />
+              )}
+
+              {/* 1st Place */}
+              {podiumPlayers[0] && (
+                <PodiumCard 
+                  player={podiumPlayers[0]} 
+                  rank={1} 
+                  onClick={() => handlePlayerClick(podiumPlayers[0])}
+                  isChampion
+                />
+              )}
+
+              {/* 3rd Place */}
+              {podiumPlayers[2] && (
+                <PodiumCard 
+                  player={podiumPlayers[2]} 
+                  rank={3} 
+                  onClick={() => handlePlayerClick(podiumPlayers[2])}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ✅ Show tied players in top 3 ranks */}
+          {!allPlayersZeroScore && uniqueRanks.map((rank, rankIndex) => {
+            if (rankIndex >= 3) return null
             
-            <div className="relative z-10">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Trophy className="h-3 w-3 md:h-4 md:w-4 text-yellow-300" />
-                <p className="text-xs font-bold text-yellow-200">CHAMPION</p>
-              </div>
-              <p className="text-xs md:text-sm font-bold text-white truncate mb-1">
-                {top3[0].user.username}
-              </p>
-              <p className="text-2xl md:text-3xl font-bold text-yellow-300 mb-0.5">
-                {top3[0].total_score}
-              </p>
-              <p className="text-xs text-yellow-200">pts</p>
-              <div className="flex gap-0.5 justify-center mt-1">
-                {[...Array(3)].map((_, i) => (
-                  <span key={i} className={`text-sm ${i < top3[0].lives ? 'opacity-100' : 'opacity-30'}`}>
-                    ❤️
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+            const playersInRank = playersByRank[rank] || []
+            const otherPlayersInRank = playersInRank.slice(1) // Skip first (shown in podium)
+            
+            if (otherPlayersInRank.length === 0) return null
+            
+            return (
+              <TiedPlayersCard 
+                key={`rank-${rank}-extras`}
+                rank={rank}
+                players={otherPlayersInRank}
+                myUserId={myUserId}
+                onPlayerClick={handlePlayerClick}
+              />
+            )
+          })}
 
-          <div className="mt-2 h-20 md:h-32 w-full bg-gradient-to-t from-yellow-600/60 to-yellow-500/40 rounded-t-xl md:rounded-t-2xl border-2 md:border-3 border-yellow-400/40 border-b-0" />
-        </div>
-      )}
-
-      {/* 3rd Place */}
-      {top3[2] && (
-        <div 
-          className="flex flex-col items-center cursor-pointer transform hover:scale-105 transition-all duration-300 w-24 md:w-32"
-          onClick={() => handlePlayerClick(top3[2])}
-        >
-          <div className="relative mb-2">
-            <div className="absolute inset-0 bg-orange-400 rounded-full blur-lg opacity-60 animate-pulse" />
-            <div className="relative w-14 h-14 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-orange-300 via-orange-500 to-orange-700 flex items-center justify-center border-3 md:border-4 border-orange-300 shadow-xl">
-              <Crown className="h-6 w-6 md:h-10 md:w-10 text-orange-900" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-orange-300 to-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-              <span className="text-xs md:text-sm font-bold text-orange-900">3</span>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-500/30 to-orange-700/40 backdrop-blur-md border-2 border-orange-400/50 rounded-xl md:rounded-2xl p-2 md:p-3 w-full text-center shadow-xl">
-            <p className="text-xs md:text-sm font-bold text-white truncate mb-1">
-              {top3[2].user.username}
-            </p>
-            <p className="text-lg md:text-2xl font-bold text-orange-200 mb-0.5">
-              {top3[2].total_score}
-            </p>
-            <p className="text-xs text-orange-300">pts</p>
-            <div className="flex gap-0.5 justify-center mt-1">
-              {[...Array(3)].map((_, i) => (
-                <span key={i} className={`text-xs ${i < top3[2].lives ? 'opacity-100' : 'opacity-30'}`}>
-                  ❤️
-                </span>
+          {/* ✅ Rest of Players (or all if zero score) */}
+          {(allPlayersZeroScore ? rankedParticipants : restOfPlayers).length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h3 className="text-sm md:text-base font-semibold text-white flex items-center gap-2 mb-3">
+                <Target className="h-4 w-4 md:h-5 md:w-5 text-cyan-400" />
+                {allPlayersZeroScore ? 'All Players' : 'Other Players'}
+              </h3>
+              {(allPlayersZeroScore ? rankedParticipants : restOfPlayers).map((player: any) => (
+                <PlayerCard 
+                  key={player.user_id}
+                  player={player}
+                  isMe={player.user_id === myUserId}
+                  onClick={() => handlePlayerClick(player)}
+                  showRank={!allPlayersZeroScore}
+                />
               ))}
             </div>
-          </div>
-
-          <div className="mt-2 h-14 md:h-20 w-full bg-gradient-to-t from-orange-600/50 to-orange-500/30 rounded-t-xl md:rounded-t-2xl border-2 border-orange-400/30 border-b-0" />
+          )}
         </div>
-      )}
-    </div>
+      </Card>
 
-    {/* Rest of Players */}
-    {restOfPlayers.length > 0 && (
-      <div className="space-y-2 mt-4">
-        <h3 className="text-sm md:text-base font-semibold text-white flex items-center gap-2 mb-3">
-          <Target className="h-4 w-4 md:h-5 md:w-5 text-cyan-400" />
-          Other Players
-        </h3>
-        {restOfPlayers.map((player: any, index: number) => {
-          const rank = index + 4
+      {/* Player Detail Popup */}
+      {showPopup && selectedPlayer && (
+        <PlayerDetailPopup player={selectedPlayer} onClose={closePopup} />
+      )}
+    </>
+  )
+}
+
+// ===== SUB-COMPONENTS (Untuk clean code) =====
+
+function PodiumCard({ player, rank, onClick, isChampion = false }: any) {
+  const rankStyles = {
+    1: {
+      badgeGradient: 'from-yellow-300 to-orange-500',
+      cardGradient: 'from-yellow-500/40 to-orange-600/40',
+      borderColor: 'border-yellow-300/60',
+      textColor: 'text-yellow-300',
+      glowColor: 'bg-yellow-400',
+      iconColor: 'text-yellow-900',
+      heightClass: 'h-20 md:h-32',
+      sizeClass: 'w-28 md:w-36',
+      iconSize: 'h-8 w-8 md:h-12 md:w-12',
+      badgeSize: 'w-7 h-7 md:w-10 md:h-10',
+      avatarSize: 'w-16 h-16 md:w-24 md:h-24',
+    },
+    2: {
+      badgeGradient: 'from-gray-200 to-gray-400',
+      cardGradient: 'from-gray-500/30 to-gray-700/40',
+      borderColor: 'border-gray-400/50',
+      textColor: 'text-gray-200',
+      glowColor: 'bg-gray-400',
+      iconColor: 'text-gray-700',
+      heightClass: 'h-16 md:h-24',
+      sizeClass: 'w-24 md:w-32',
+      iconSize: 'h-6 w-6 md:h-10 md:w-10',
+      badgeSize: 'w-6 h-6 md:w-8 md:h-8',
+      avatarSize: 'w-14 h-14 md:w-20 md:h-20',
+    },
+    3: {
+      badgeGradient: 'from-orange-300 to-orange-500',
+      cardGradient: 'from-orange-500/30 to-orange-700/40',
+      borderColor: 'border-orange-400/50',
+      textColor: 'text-orange-200',
+      glowColor: 'bg-orange-400',
+      iconColor: 'text-orange-900',
+      heightClass: 'h-14 md:h-20',
+      sizeClass: 'w-24 md:w-32',
+      iconSize: 'h-6 w-6 md:h-10 md:w-10',
+      badgeSize: 'w-6 h-6 md:w-8 md:h-8',
+      avatarSize: 'w-14 h-14 md:w-20 md:h-20',
+    },
+  }
+
+  const style = rankStyles[rank as keyof typeof rankStyles]
+
+  return (
+    <div 
+      className={`flex flex-col items-center cursor-pointer transform hover:scale-105 transition-all duration-300 ${style.sizeClass} ${rank === 1 ? '-mt-4 z-10' : ''}`}
+      onClick={onClick}
+    >
+      {rank === 1 && (
+        <div className="absolute w-24 h-24 md:w-32 md:h-32 bg-yellow-400/30 rounded-full blur-2xl animate-pulse" />
+      )}
+      
+      <div className="relative mb-3 z-10">
+        <div className={`absolute inset-0 ${style.glowColor} rounded-full blur-xl opacity-70 animate-pulse`} />
+        <div className={`relative ${style.avatarSize} rounded-full bg-gradient-to-br from-${style.badgeGradient.split('-')[1]}-300 via-${style.badgeGradient.split('-')[1]}-500 to-${style.badgeGradient.split('-')[1]}-700 flex items-center justify-center border-3 md:border-4 border-${style.badgeGradient.split('-')[1]}-200 shadow-2xl`}>
+          <Crown className={`${style.iconSize} ${style.iconColor} ${rank === 1 ? 'animate-bounce' : ''}`} />
+        </div>
+        <div className={`absolute -top-2 -right-1 ${style.badgeSize} bg-gradient-to-br ${style.badgeGradient} rounded-full flex items-center justify-center border-2 border-white shadow-xl ${rank === 1 ? 'animate-pulse' : ''}`}>
+          <span className="text-sm md:text-base font-bold text-white">{rank}</span>
+        </div>
+        {rank === 1 && (
+          <Star className="absolute -top-4 md:-top-6 left-1/2 -translate-x-1/2 h-5 w-5 md:h-8 md:w-8 text-yellow-300 animate-spin" style={{ animationDuration: '4s' }} />
+        )}
+      </div>
+
+      <div className={`bg-gradient-to-br ${style.cardGradient} backdrop-blur-md border-2 md:border-3 ${style.borderColor} rounded-xl md:rounded-2xl p-3 md:p-4 w-full text-center shadow-2xl relative overflow-hidden`}>
+        {rank === 1 && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shine" />
+        )}
+        
+        <div className="relative z-10">
+          {rank === 1 && (
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Trophy className="h-3 w-3 md:h-4 md:w-4 text-yellow-300" />
+              <p className="text-xs font-bold text-yellow-200">CHAMPION</p>
+            </div>
+          )}
+          <p className="text-xs md:text-sm font-bold text-white truncate mb-1">
+            {player.user.username}
+          </p>
+          <p className={`text-2xl md:text-3xl font-bold ${style.textColor} mb-0.5`}>
+            {player.total_score}
+          </p>
+          <p className="text-xs text-gray-300">pts</p>
+          <div className="flex gap-0.5 justify-center mt-1">
+            {[...Array(3)].map((_, i) => (
+              <span key={i} className={`text-sm ${i < player.lives_remaining ? 'opacity-100' : 'opacity-30'}`}>
+                ❤️
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className={`mt-2 ${style.heightClass} w-full bg-gradient-to-t from-${style.badgeGradient.split('-')[1]}-600/60 to-${style.badgeGradient.split('-')[1]}-500/40 rounded-t-xl md:rounded-t-2xl border-2 md:border-3 border-${style.badgeGradient.split('-')[1]}-400/40 border-b-0`} />
+    </div>
+  )
+}
+
+function TiedPlayersCard({ rank, players, myUserId, onPlayerClick }: any) {
+  const rankColors = [
+    { bg: 'bg-yellow-500/10', border: 'border-yellow-400/30', text: 'text-yellow-300', gradient: 'from-yellow-400 to-orange-500' },
+    { bg: 'bg-gray-500/10', border: 'border-gray-400/30', text: 'text-gray-300', gradient: 'from-gray-300 to-gray-500' },
+    { bg: 'bg-orange-500/10', border: 'border-orange-400/30', text: 'text-orange-300', gradient: 'from-orange-300 to-orange-500' }
+  ]
+  const colors = rankColors[rank - 1] || rankColors[2]
+  
+  return (
+    <div className={`mb-4 p-3 ${colors.bg} rounded-lg border ${colors.border}`}>
+      <p className={`text-xs ${colors.text} mb-2 text-center flex items-center justify-center gap-1`}>
+        <span>🏆</span>
+        <span>Also Rank #{rank} - Tied ({players.length} {players.length === 1 ? 'player' : 'players'})</span>
+      </p>
+      <div className="space-y-2">
+        {players.map((player: any) => {
           const isMe = player.user_id === myUserId
-          
           return (
             <div
               key={player.user_id}
-              onClick={() => handlePlayerClick(player)}
-              className={`flex items-center justify-between p-2 md:p-3 rounded-xl cursor-pointer transition-all transform hover:scale-102 ${
-                isMe 
-                  ? 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 border-2 border-blue-400' 
-                  : 'bg-white/10 border border-white/20 hover:bg-white/15'
+              onClick={() => onPlayerClick(player)}
+              className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
+                isMe ? 'bg-blue-500/20 border border-blue-400' : 'bg-white/5 hover:bg-white/10'
               }`}
             >
-              <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                <div className={`flex items-center justify-center w-7 h-7 md:w-10 md:h-10 rounded-full font-bold text-sm md:text-base ${
-                  isMe ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
-                }`}>
-                  #{rank}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center border-2 border-white/30 flex-shrink-0`}>
+                  <Award className="h-4 w-4 text-white" />
                 </div>
-                
-                <div className="w-7 h-7 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center border-2 border-white/30 flex-shrink-0">
-                  <Award className="h-4 w-4 md:h-5 md:w-5 text-white" />
-                </div>
-                
                 <div className="flex-1 min-w-0">
-                  <p className={`font-bold truncate text-xs md:text-sm ${isMe ? 'text-cyan-200' : 'text-white'}`}>
-                    {player.user.username} {isMe && <span className="text-xs">(You)</span>}
+                  <p className={`font-bold text-sm truncate ${isMe ? colors.text : 'text-white'}`}>
+                    {player.user.username} {isMe && '(You)'}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-gray-300">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
                     <span>Lv.{player.user.level}</span>
                     <span>•</span>
                     <div className="flex gap-0.5">
                       {[...Array(3)].map((_, i) => (
-                        <span key={i} className={i < player.lives ? 'text-red-500' : 'text-gray-600'}>
+                        <span key={i} className={i < player.lives_remaining ? 'text-red-500' : 'text-gray-600'}>
                           ❤️
                         </span>
                       ))}
@@ -283,9 +434,8 @@ function ModernLeaderboard({
                   </div>
                 </div>
               </div>
-
               <div className="text-right flex-shrink-0">
-                <p className={`text-base md:text-xl font-bold ${isMe ? 'text-cyan-300' : 'text-white'}`}>
+                <p className={`text-lg font-bold ${isMe ? colors.text : 'text-white'}`}>
                   {player.total_score}
                 </p>
                 <p className="text-xs text-gray-400">pts</p>
@@ -294,79 +444,123 @@ function ModernLeaderboard({
           )
         })}
       </div>
-    )}
-  </div>
-</Card>
-
-      {/* Player Detail Popup */}
-      {showPopup && selectedPlayer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="relative bg-gradient-to-br from-purple-900/95 via-blue-900/95 to-pink-900/95 backdrop-blur-xl rounded-2xl md:rounded-3xl border-2 border-white/20 max-w-md w-full shadow-2xl transform animate-scaleIn">
-            <button
-              onClick={closePopup}
-              className="absolute top-3 right-3 md:top-4 md:right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
-            >
-              <X className="h-4 w-4 md:h-5 md:w-5 text-white" />
-            </button>
-
-            <div className="p-4 md:p-6 border-b border-white/10">
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-500 flex items-center justify-center border-3 md:border-4 border-white/30 shadow-xl flex-shrink-0">
-                  <Crown className="h-8 w-8 md:h-10 md:w-10 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-xl md:text-2xl font-bold text-white truncate">{selectedPlayer.user.username}</h2>
-                  <p className="text-sm text-gray-300">Level {selectedPlayer.user.level}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 md:p-6 space-y-3 md:space-y-4">
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 text-center border border-white/20">
-                  <Trophy className="h-6 w-6 md:h-8 md:w-8 text-yellow-400 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold text-white">{selectedPlayer.total_score}</p>
-                  <p className="text-xs text-gray-300">Total Score</p>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 text-center border border-white/20">
-                  <Zap className="h-6 w-6 md:h-8 md:w-8 text-cyan-400 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold text-white">
-                    {sortedParticipants.findIndex((p: any) => p.user_id === selectedPlayer.user_id) + 1}
-                  </p>
-                  <p className="text-xs text-gray-300">Rank</p>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-red-500/20 to-pink-500/20 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 border border-red-400/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm md:text-base text-white font-semibold">Lives</span>
-                  <div className="flex gap-1">
-                    {[...Array(3)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`text-xl md:text-2xl ${i < selectedPlayer.lives ? 'opacity-100' : 'opacity-30'}`}
-                      >
-                        ❤️
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 py-2 md:py-3 bg-green-500/20 rounded-xl md:rounded-2xl border border-green-400/30">
-                <div className="w-2 h-2 md:w-3 md:h-3 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-sm md:text-base text-green-300 font-semibold">Active Player</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   )
 }
 
-// ===== MAIN GAME PAGE =====
+function PlayerCard({ player, isMe, onClick, showRank = true }: any) {
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center justify-between p-2 md:p-3 rounded-xl cursor-pointer transition-all transform hover:scale-102 ${
+        isMe 
+          ? 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 border-2 border-blue-400' 
+          : 'bg-white/10 border border-white/20 hover:bg-white/15'
+      }`}
+    >
+      <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+        {showRank && (
+          <div className={`flex items-center justify-center w-7 h-7 md:w-10 md:h-10 rounded-full font-bold text-sm md:text-base flex-shrink-0 ${
+            isMe ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
+          }`}>
+            #{player.rank}
+          </div>
+        )}
+        
+        <div className="w-7 h-7 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center border-2 border-white/30 flex-shrink-0">
+          <Award className="h-4 w-4 md:h-5 md:w-5 text-white" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <p className={`font-bold truncate text-xs md:text-sm ${isMe ? 'text-cyan-200' : 'text-white'}`}>
+            {player.user.username} {isMe && <span className="text-xs">(You)</span>}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <span>Lv.{player.user.level}</span>
+            <span>•</span>
+            <div className="flex gap-0.5">
+              {[...Array(3)].map((_, i) => (
+                <span key={i} className={i < player.lives_remaining ? 'text-red-500' : 'text-gray-600'}>
+                  ❤️
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-right flex-shrink-0">
+        <p className={`text-base md:text-xl font-bold ${isMe ? 'text-cyan-300' : 'text-white'}`}>
+          {player.total_score}
+        </p>
+        <p className="text-xs text-gray-400">pts</p>
+      </div>
+    </div>
+  )
+}
+
+function PlayerDetailPopup({ player, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      <div className="relative bg-gradient-to-br from-purple-900/95 via-blue-900/95 to-pink-900/95 backdrop-blur-xl rounded-2xl md:rounded-3xl border-2 border-white/20 max-w-md w-full shadow-2xl transform animate-scaleIn">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 md:top-4 md:right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+        >
+          <X className="h-4 w-4 md:h-5 md:w-5 text-white" />
+        </button>
+
+        <div className="p-4 md:p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-500 flex items-center justify-center border-3 md:border-4 border-white/30 shadow-xl flex-shrink-0">
+              <Crown className="h-8 w-8 md:h-10 md:w-10 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl md:text-2xl font-bold text-white truncate">{player.user.username}</h2>
+              <p className="text-sm text-gray-300">Level {player.user.level}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6 space-y-3 md:space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 text-center border border-white/20">
+              <Trophy className="h-6 w-6 md:h-8 md:w-8 text-yellow-400 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-white">{player.total_score}</p>
+              <p className="text-xs text-gray-300">Total Score</p>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 text-center border border-white/20">
+              <Zap className="h-6 w-6 md:h-8 md:w-8 text-cyan-400 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-white">#{player.rank}</p>
+              <p className="text-xs text-gray-300">Rank</p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-red-500/20 to-pink-500/20 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 border border-red-400/30">
+            <div className="flex items-center justify-between">
+              <span className="text-sm md:text-base text-white font-semibold">Lives</span>
+              <div className="flex gap-1">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className={`text-xl md:text-2xl ${i < player.lives_remaining ? 'opacity-100' : 'opacity-30'}`}>
+                    ❤️
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 py-2 md:py-3 bg-green-500/20 rounded-xl md:rounded-2xl border border-green-400/30">
+            <div className="w-2 h-2 md:w-3 md:h-3 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-sm md:text-base text-green-300 font-semibold">Active Player</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== MAIN GAME PAGE (REST OF THE CODE - KEEP AS IS) =====
 export default function GamePage() {
   const router = useRouter()
   const params = useParams()
@@ -383,6 +577,9 @@ export default function GamePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nextStageNumber, setNextStageNumber] = useState<number | null>(null)
 
+  const [backgroundStars, setBackgroundStars] = useState<Array<{top: string, left: string, delay: string, duration: string, opacity: number}>>([])
+  const [shootingStars, setShootingStars] = useState<Array<{top: string, delay: string}>>([])
+
   const hasAnswered = useRef(false)
 
   const handleGameEvent = useCallback(async (event: GameEvent) => {
@@ -396,7 +593,6 @@ export default function GamePage() {
           isMyTurn: event.userId === user?.id
         })
         
-        // ✅ Refresh state terlebih dahulu
         const stateResp = await fetch(`/api/game/${roomId}/state`)
         const stateData = await stateResp.json()
         
@@ -409,13 +605,11 @@ export default function GamePage() {
           
           if (myParticipant?.status === 'eliminated') {
             console.log('💀 I am eliminated - spectator mode')
-            // ✅ Tetap tampilkan question untuk spectator
             setCurrentQuestion(event.question)
             setPhase('waiting')
             return
           }
           
-          // ✅ Cek apakah ini giliran saya
           const isMyTurn = stateData.game.currentTurn?.user_id === user?.id
           
           if (isMyTurn && event.userId === user?.id) {
@@ -425,7 +619,6 @@ export default function GamePage() {
             setPhase('reading')
           } else {
             console.log('👀 Spectating - show question but disabled')
-            // ✅ PERBAIKAN: Tampilkan question untuk spectator
             setCurrentQuestion(event.question)
             setPhase('waiting')
           }
@@ -435,7 +628,6 @@ export default function GamePage() {
       case 'ANSWER_SUBMITTED':
         console.log('✍️ Answer submitted by:', event.userId)
         
-        // ✅ PERBAIKAN: Refresh state dan cek giliran
         const answerResp = await fetch(`/api/game/${roomId}/state`)
         const answerData = await answerResp.json()
         
@@ -452,7 +644,6 @@ export default function GamePage() {
             return
           }
           
-          // ✅ Cek apakah sekarang giliran saya
           const nowMyTurn = answerData.game.currentTurn?.user_id === user?.id
           
           if (nowMyTurn && !hasAnswered.current) {
@@ -460,10 +651,9 @@ export default function GamePage() {
             setPhase('waiting')
             setCurrentQuestion(null)
             
-            // ✅ Tunggu sebentar agar turn queue ter-update di database
             setTimeout(() => {
               loadQuestion()
-            }, 1000) // Increase dari 500ms ke 1000ms
+            }, 1000)
           } else {
             console.log('👀 Still waiting for my turn')
             setPhase('waiting')
@@ -553,14 +743,27 @@ export default function GamePage() {
     }
   }, [authLoading, user, roomId])
 
-  // Force refresh every 2 seconds (production fallback)
-useEffect(() => {
-  if (phase === 'finished' || phase === 'loading') return
-  const interval = setInterval(() => refreshGameState(), 2000)
-  return () => clearInterval(interval)
-}, [phase, roomId])
+  useEffect(() => {
+    if (phase === 'finished' || phase === 'loading') return
+    const interval = setInterval(() => refreshGameState(), 2000)
+    return () => clearInterval(interval)
+  }, [phase, roomId])
 
-  
+  useEffect(() => {
+    setBackgroundStars([...Array(150)].map(() => ({
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 3}s`,
+      duration: `${2 + Math.random() * 4}s`,
+      opacity: Math.random() * 0.8 + 0.2
+    })))
+    
+    setShootingStars([...Array(5)].map((_, i) => ({
+      top: `${Math.random() * 50}%`,
+      delay: `${i * 6}s`
+    })))
+  }, [])
+
   async function initializeGame() {
     try {
       console.log('🎮 Initializing game...')
@@ -599,7 +802,7 @@ useEffect(() => {
         .from('active_questions')
         .select('*')
         .eq('room_id', roomId)
-        .eq('user_id', user?.id) // ✅ Filter by user_id!
+        .eq('user_id', user?.id)
         .maybeSingle()
 
       if (data) {
@@ -624,7 +827,6 @@ useEffect(() => {
     }
   }
 
-
   async function loadQuestion() {
     try {
       console.log('❓ Loading NEW question for user:', user?.id)
@@ -646,7 +848,6 @@ useEffect(() => {
     } catch (error: any) {
       console.error('❌ Load question error:', error.message)
       
-      // ✅ Retry dengan backoff
       setTimeout(() => {
         console.log('🔄 Retrying question load...')
         loadQuestion()
@@ -796,24 +997,10 @@ useEffect(() => {
     }
   }
 
-  // ===== RENDER =====
+  // LOADING SCREEN - ✅ FIX: No Math.random() here
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-        {/* Galaxy Background */}
-        <div className="absolute inset-0">
-          {[...Array(100)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-              }}
-            />
-          ))}
-        </div>
         <div className="text-center relative z-10">
           <Loader2 className="h-8 w-8 md:h-12 md:w-12 animate-spin text-white mx-auto mb-4" />
           <p className="text-white text-lg md:text-xl">Loading game...</p>
@@ -828,24 +1015,10 @@ useEffect(() => {
 
   const isMyTurn = gameState.currentTurn?.user_id === user.id
 
-  // ===== STAGE TRANSITION =====
+  // STAGE TRANSITION
   if (phase === 'stage_transition') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 relative overflow-hidden">
-        <div className="absolute inset-0">
-          {[...Array(80)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-              }}
-            />
-          ))}
-        </div>
-        
         <Card className="bg-white/10 backdrop-blur-xl border-white/20 p-6 md:p-12 text-center max-w-2xl w-full relative z-10 animate-pulse">
           <div className="mb-6">
             <Trophy className="h-16 w-16 md:h-20 md:w-20 text-yellow-400 mx-auto mb-4 animate-bounce" />
@@ -877,9 +1050,7 @@ useEffect(() => {
     )
   }
 
-  
-
-  // ===== FINISHED STATE =====
+  // FINISHED STATE
   if (phase === 'finished') {
     const sortedParticipants = gameState.participants
       .filter((p: any) => p.status === 'active')
@@ -891,21 +1062,6 @@ useEffect(() => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 md:p-8 flex items-center justify-center relative overflow-hidden">
-        {/* Galaxy Background */}
-        <div className="absolute inset-0">
-          {[...Array(100)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-              }}
-            />
-          ))}
-        </div>
-
         <div className="max-w-4xl w-full relative z-10">
           <Card className={`backdrop-blur-xl border-2 p-6 md:p-8 text-center mb-6 ${
             isWinner 
@@ -1058,33 +1214,33 @@ useEffect(() => {
     )
   }
 
-  // ===== MAIN GAME UI =====
+  // MAIN GAME UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 md:p-8 relative overflow-hidden">
       {/* Galaxy Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(150)].map((_, i) => (
+        {backgroundStars.map((star, i) => (
           <div
             key={`star-${i}`}
             className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
             style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 4}s`,
-              opacity: Math.random() * 0.8 + 0.2,
+              top: star.top,
+              left: star.left,
+              animationDelay: star.delay,
+              animationDuration: star.duration,
+              opacity: star.opacity,
             }}
           />
         ))}
         
-        {[...Array(5)].map((_, i) => (
+        {shootingStars.map((star, i) => (
           <div
             key={`shooting-${i}`}
             className="absolute w-24 md:w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent animate-shooting-star"
             style={{
-              top: `${Math.random() * 50}%`,
+              top: star.top,
               left: '-10%',
-              animationDelay: `${i * 6}s`,
+              animationDelay: star.delay,
             }}
           />
         ))}
@@ -1117,9 +1273,7 @@ useEffect(() => {
           </div>
 
           {/* Right: Game Area */}
-          {/* Right: Game Area */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Current Turn Notification - TAMBAHKAN DI SINI */}
             {gameState.currentTurn && (
               <Card className="bg-gradient-to-r from-cyan-500/30 to-blue-500/30 backdrop-blur-xl border-2 border-cyan-400 p-4 md:p-6 animate-pulse">
                 <div className="flex items-center justify-center gap-3">
