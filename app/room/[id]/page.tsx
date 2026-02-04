@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Copy, Check, Users, Crown, LogOut, X, Settings, Volume2, VolumeX, Sparkles, Trophy, Target, ScanLine, Share2 } from 'lucide-react'
 import { MusicControl } from '@/components/ui/MusicControl'
-import confetti from 'canvas-confetti' // Import Confetti
+import confetti from 'canvas-confetti'
 
 interface Participant {
   id: string
@@ -115,12 +115,10 @@ export default function RoomLobbyPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // --- FITUR BARU: SHARE BUTTON ---
   const handleShare = async () => {
     if (!room) return
     const joinLink = `${window.location.origin}/room/join?code=${room.room_code}`
     
-    // Cek apakah browser support Native Share (Android/iOS/Safari)
     if (navigator.share) {
       try {
         await navigator.share({
@@ -132,7 +130,6 @@ export default function RoomLobbyPage() {
         console.log('Share dibatalkan user')
       }
     } else {
-      // Fallback kalau buka di PC biasa: Copy Link
       await navigator.clipboard.writeText(joinLink)
       alert('Link Room berhasil disalin ke clipboard!')
     }
@@ -147,27 +144,22 @@ export default function RoomLobbyPage() {
     } catch (error) { console.error(error) }
   }
 
-  // --- FITUR BARU: START DENGAN CONFETTI ---
   async function handleStartGame() {
     if (!isHost || participants.length < 2) return
     
-    // 1. Trigger Efek Visual Dulu
     setStarting(true)
     
-    // Tembak Confetti dari kiri dan kanan
     var duration = 2000;
     var end = Date.now() + duration;
 
     (function frame() {
-      // Confetti Kiri
       confetti({
         particleCount: 7,
         angle: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: ['#a855f7', '#ec4899', '#ffffff'] // Warna Tema Kita
+        colors: ['#a855f7', '#ec4899', '#ffffff']
       });
-      // Confetti Kanan
       confetti({
         particleCount: 7,
         angle: 120,
@@ -181,10 +173,8 @@ export default function RoomLobbyPage() {
       }
     }());
 
-    // 2. Delay sedikit (1.5 detik) biar animasinya kelihatan juri
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // 3. Baru Panggil API (Logic Asli)
     try {
       await fetch(`/api/game/${roomId}/start`, { method: 'POST' })
     } catch (error) {
@@ -214,7 +204,7 @@ export default function RoomLobbyPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 min-h-screen p-4 md:p-8">
+      <div className="relative z-10 min-h-screen p-4 md:p-8 pb-24 md:pb-8"> {/* Added bottom padding for mobile sticky button */}
         <div className="max-w-6xl mx-auto">
           
           {/* Top Bar */}
@@ -244,74 +234,79 @@ export default function RoomLobbyPage() {
           </div>
 
           {/* === HERO SECTION: KODE + QR === */}
-          <div className="mb-8 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl border border-white/20 p-6 md:p-8 shadow-2xl">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+          <div className="mb-6 md:mb-8 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl border border-white/20 p-5 md:p-8 shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center">
               
               {/* KOLOM 1 & 2 (KIRI): KODE ROOM & STATS */}
-              <div className="md:col-span-2 space-y-6">
+              <div className="md:col-span-2 space-y-5 md:space-y-6">
                  
                  {/* Kode Room Section */}
                  <div className="space-y-3">
                     <div className="flex items-center gap-2 text-purple-300">
                       <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium uppercase tracking-wider">Kode Akses</span>
+                      <span className="text-xs md:text-sm font-medium uppercase tracking-wider">Kode Akses</span>
                     </div>
                     
                     {/* AREA KODE & TOMBOL */}
-                    <div className="flex items-center gap-3">
-                       <div className="flex-1 bg-black/40 rounded-2xl p-4 md:p-6 border border-purple-500/30 overflow-hidden relative group">
-                          <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                          {/* Kode Room */}
-                          <div className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 tracking-[0.2em] text-center animate-pulse truncate select-all">
-                             {room.room_code}
-                          </div>
-                       </div>
-                       
-                       {/* Tombol Copy */}
-                       <button 
-                          onClick={copyRoomCode} 
-                          className="h-full w-20 md:w-24 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-purple-500/50 flex-shrink-0 active:scale-95 flex-col gap-1"
-                          title="Salin Kode"
-                       >
-                          {copied ? <Check className="w-6 h-6 md:w-8 md:h-8 text-white" /> : <Copy className="w-6 h-6 md:w-8 md:h-8 text-white" />}
-                          <span className="text-[10px] text-white/80 font-bold">SALIN</span>
-                       </button>
+                    <div className="flex flex-row items-stretch gap-2 md:gap-3">
+                        <div className="flex-1 min-w-0 bg-black/40 rounded-2xl p-3 md:p-6 border border-purple-500/30 overflow-hidden relative group flex items-center justify-center">
+                           <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                           {/* Kode Room - Responsive Text */}
+                           <div className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 tracking-[0.1em] md:tracking-[0.2em] text-center animate-pulse truncate select-all">
+                              {room.room_code}
+                           </div>
+                        </div>
+                        
+                        {/* Tombol Copy & Share - Grouped */}
+                        <div className="flex flex-col gap-2">
+                            <button 
+                              onClick={copyRoomCode} 
+                              className="h-full min-h-[50px] w-14 md:w-24 rounded-xl md:rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-purple-500/50 active:scale-95 flex-col gap-0.5 md:gap-1 p-1"
+                              title="Salin Kode"
+                            >
+                              {copied ? <Check className="w-5 h-5 md:w-8 md:h-8 text-white" /> : <Copy className="w-5 h-5 md:w-8 md:h-8 text-white" />}
+                              <span className="text-[8px] md:text-[10px] text-white/80 font-bold">SALIN</span>
+                            </button>
 
-                       {/* TOMBOL SHARE (BARU!) */}
-                       <button 
-                          onClick={handleShare} 
-                          className="h-full w-20 md:w-24 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-blue-500/50 flex-shrink-0 active:scale-95 flex-col gap-1"
-                          title="Bagikan Link"
-                       >
-                          <Share2 className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                          <span className="text-[10px] text-white/80 font-bold">SHARE</span>
-                       </button>
+                            <button 
+                              onClick={handleShare} 
+                              className="h-full min-h-[50px] w-14 md:w-24 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-blue-500/50 active:scale-95 flex-col gap-0.5 md:gap-1 p-1"
+                              title="Bagikan Link"
+                            >
+                              <Share2 className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                              <span className="text-[8px] md:text-[10px] text-white/80 font-bold">SHARE</span>
+                            </button>
+                        </div>
                     </div>
                  </div>
 
                  {/* Stats Grid */}
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-black/30 rounded-2xl p-4 border border-purple-500/20 flex items-center gap-4">
-                       <div className="p-3 bg-purple-500/20 rounded-xl text-purple-300"><Trophy className="w-5 h-5" /></div>
-                       <div>
-                          <div className="text-xs text-purple-400/70 uppercase font-bold">Total Babak</div>
-                          <div className="text-2xl font-bold text-white">{room.max_stages}</div>
+                 <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="bg-black/30 rounded-2xl p-3 md:p-4 border border-purple-500/20 flex items-center gap-3 md:gap-4">
+                       <div className="p-2 md:p-3 bg-purple-500/20 rounded-xl text-purple-300 flex-shrink-0">
+                         <Trophy className="w-4 h-4 md:w-5 md:h-5" />
+                       </div>
+                       <div className="min-w-0">
+                          <div className="text-[10px] md:text-xs text-purple-400/70 uppercase font-bold truncate">Total Babak</div>
+                          <div className="text-xl md:text-2xl font-bold text-white">{room.max_stages}</div>
                        </div>
                     </div>
-                    <div className="bg-black/30 rounded-2xl p-4 border border-purple-500/20 flex items-center gap-4">
-                       <div className="p-3 bg-blue-500/20 rounded-xl text-blue-300"><Users className="w-5 h-5" /></div>
-                       <div>
-                          <div className="text-xs text-blue-400/70 uppercase font-bold">Pemain</div>
-                          <div className="text-2xl font-bold text-white">{participants.length}<span className="text-lg text-slate-500">/8</span></div>
+                    <div className="bg-black/30 rounded-2xl p-3 md:p-4 border border-purple-500/20 flex items-center gap-3 md:gap-4">
+                       <div className="p-2 md:p-3 bg-blue-500/20 rounded-xl text-blue-300 flex-shrink-0">
+                         <Users className="w-4 h-4 md:w-5 md:h-5" />
+                       </div>
+                       <div className="min-w-0">
+                          <div className="text-[10px] md:text-xs text-blue-400/70 uppercase font-bold truncate">Pemain</div>
+                          <div className="text-xl md:text-2xl font-bold text-white">{participants.length}<span className="text-base md:text-lg text-slate-500">/8</span></div>
                        </div>
                     </div>
                  </div>
               </div>
 
-              {/* KOLOM 3 (KANAN): QR CODE BESAR */}
-              <div className="flex flex-col items-center justify-center border-l-0 md:border-l border-white/10 pl-0 md:pl-8 pt-6 md:pt-0">
+              {/* KOLOM 3 (KANAN): QR CODE BESAR - Hidden on small mobile to save space if needed, or scaled */}
+              <div className="flex flex-col items-center justify-center border-t md:border-t-0 border-l-0 md:border-l border-white/10 pt-6 md:pt-0 md:pl-8">
                  <div className="relative group bg-white p-3 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_50px_rgba(168,85,247,0.5)] transition-all duration-500">
-                    <div className="w-48 h-48 md:w-56 md:h-56 bg-white overflow-hidden rounded-xl relative">
+                    <div className="w-40 h-40 md:w-56 md:h-56 bg-white overflow-hidden rounded-xl relative">
                        {qrCodeImg ? (
                           <>
                              <img src={qrCodeImg} alt="QR Join" className="w-full h-full object-contain" />
@@ -323,7 +318,7 @@ export default function RoomLobbyPage() {
                        )}
                     </div>
                  </div>
-                 <div className="mt-4 flex items-center gap-2 text-purple-300 font-bold uppercase tracking-widest text-xs text-center">
+                 <div className="mt-4 flex items-center gap-2 text-purple-300 font-bold uppercase tracking-widest text-[10px] md:text-xs text-center">
                     <ScanLine className="w-4 h-4" /> Scan untuk Join
                  </div>
               </div>
@@ -415,27 +410,29 @@ export default function RoomLobbyPage() {
             </div>
           </div>
 
-          {/* Start Button (SAMA) */}
-          <div className="md:relative sticky bottom-4 left-0 right-0 z-30">
-            {isHost && room.status === 'waiting' && (
-              <button
-                onClick={handleStartGame}
-                disabled={starting || participants.length < 2}
-                className="w-full h-14 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 font-bold text-white text-base md:text-xl shadow-2xl shadow-green-500/50 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                {starting ? 'Memulai...' : 'Mulai Pertarungan'}
-              </button>
-            )}
+          {/* Start Button (Fixed on Mobile, Relative on Desktop) */}
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent z-30 md:relative md:bg-none md:p-0">
+            <div className="max-w-6xl mx-auto">
+              {isHost && room.status === 'waiting' && (
+                <button
+                  onClick={handleStartGame}
+                  disabled={starting || participants.length < 2}
+                  className="w-full h-14 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 font-bold text-white text-base md:text-xl shadow-2xl shadow-green-500/50 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                  {starting ? 'Memulai...' : 'Mulai Pertarungan'}
+                </button>
+              )}
 
-            {!isHost && (
-              <div className="text-center py-4">
-                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/20">
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                  <span className="text-white/80 text-xs md:text-sm">Menunggu host memulai...</span>
+              {!isHost && (
+                <div className="text-center md:py-4">
+                  <div className="inline-flex w-full md:w-auto justify-center items-center gap-3 px-5 py-3 rounded-xl bg-white/5 backdrop-blur-xl border border-white/20">
+                    <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                    <span className="text-white/80 text-xs md:text-sm">Menunggu host memulai...</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
