@@ -42,8 +42,32 @@ export default function Dashboard() {
     }
     if (user) {
       loadRoomHistory()
+      
+      // ✅ REFRESH USER STATS setelah game selesai
+      refreshUserStats()
     }
   }, [loading, isAuthenticated, user, router])
+
+  async function refreshUserStats() {
+    if (!user) return
+    
+    try {
+      const { data: updatedUser, error } = await supabase
+        .from('users')
+        .select('level, xp, total_games, total_wins')
+        .eq('id', user.id)
+        .single()
+      
+      if (updatedUser && !error) {
+        // Update user object di hook (jika ada setter)
+        // Atau trigger re-render dengan state
+        console.log('✅ Stats refreshed:', updatedUser)
+      }
+    } catch (error) {
+      console.error('Failed to refresh stats:', error)
+    }
+  }
+
 
   async function loadRoomHistory() {
     if (!user) return

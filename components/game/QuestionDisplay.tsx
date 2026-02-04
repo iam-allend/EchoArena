@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { CheckCircle, XCircle, Eye, Zap } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, Zap, Volume2, StopCircle } from 'lucide-react'
 import { VoiceAnswerControl } from './VoiceAnswerControl'
 
 interface Question {
@@ -38,6 +38,35 @@ export function QuestionDisplay({
   phase = 'answering'
 }: QuestionDisplayProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null)
+  
+  // --- 1. STATE UNTUK SUARA ---
+  const [isSpeaking, setIsSpeaking] = useState(false)
+
+  // --- 2. LOGIC MATIKAN SUARA JIKA SOAL BERUBAH ---
+  useEffect(() => {
+    window.speechSynthesis.cancel()
+    setIsSpeaking(false)
+  }, [question])
+
+  // --- 3. FUNGSI BICARA (HANYA SOAL) ---
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel()
+      setIsSpeaking(false)
+      return
+    }
+
+    // HANYA BACA TEKS SOAL (Supaya cukup dalam 7 detik)
+    const textToRead = question.question_text
+
+    const utterance = new SpeechSynthesisUtterance(textToRead)
+    utterance.lang = 'id-ID' // Bahasa Indonesia
+    utterance.rate = 1.1     // Sedikit dipercepat agar pas waktunya
+    utterance.onend = () => setIsSpeaking(false)
+
+    window.speechSynthesis.speak(utterance)
+    setIsSpeaking(true)
+  }
 
   const options = [
     { letter: 'A' as const, text: question.option_a },
@@ -115,7 +144,7 @@ export function QuestionDisplay({
         />
       )}
 
-      {/* ✅ MAIN CARD - Different styles for active vs spectator */}
+      {/* ✅ MAIN CARD */}
       <Card className={`
         backdrop-blur-sm p-6 transition-all duration-300
         ${isMyTurn && !showResult
@@ -138,12 +167,31 @@ export function QuestionDisplay({
           )}
         </div>
 
-        {/* Question Text */}
-        <h2 className={`text-2xl font-bold mb-6 ${
-          isMyTurn ? 'text-white' : 'text-purple-200'
-        }`}>
-          {question.question_text}
-        </h2>
+        {/* --- 4. TEXT SOAL + TOMBOL SUARA --- */}
+        <div className="relative mb-6">
+          <div className="flex justify-between items-start gap-4">
+            <h2 className={`text-2xl font-bold ${isMyTurn ? 'text-white' : 'text-purple-200'}`}>
+              {question.question_text}
+            </h2>
+            
+            <button
+              onClick={handleSpeak}
+              className={`flex-shrink-0 p-2 rounded-full transition-all duration-300 ${
+                isSpeaking 
+                  ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)] animate-pulse' 
+                  : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
+              }`}
+              title={isSpeaking ? "Matikan Suara" : "Bacakan Soal"}
+            >
+              {isSpeaking ? (
+                <StopCircle className="w-6 h-6" />
+              ) : (
+                <Volume2 className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+        </div>
+        {/* ----------------------------------- */}
 
         {/* Answer Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

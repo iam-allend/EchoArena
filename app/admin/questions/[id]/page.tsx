@@ -1,22 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Loader2, CheckCircle2, PlusCircle } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Eraser, CheckCircle2 } from 'lucide-react'
 
-export default function NewQuestionPage() {
+export default function EditQuestionPage() {
+  const { id } = useParams()
   const router = useRouter()
   const supabase = createClient()
   
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState<any[]>([])
   
-  // State Form (Default Value)
+  // State Form
   const [formData, setFormData] = useState({
     question_text: '',
     option_a: '',
@@ -28,40 +30,82 @@ export default function NewQuestionPage() {
     category_id: ''
   })
 
-  // 1. Fetch Categories saat load
+  // 1. Fetch Data Soal & Kategori saat halaman dibuka
   useEffect(() => {
-    const getCategories = async () => {
-      const { data } = await supabase.from('categories').select('id, name')
-      if (data) setCategories(data)
-    }
-    getCategories()
-  }, [])
+    async function fetchData() {
+      try {
+        // Ambil Data Categories untuk Dropdown
+        const { data: cats } = await supabase.from('categories').select('*')
+        if (cats) setCategories(cats)
 
-  // 2. Handle Submit (INSERT)
-  const handleSubmit = async (e: React.FormEvent) => {
+        // Ambil Data Soal Berdasarkan ID
+        const { data: question, error } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('id', id)
+          .single()
+
+        if (error) throw error
+
+        // Isi form dengan data lama
+        if (question) {
+          setFormData({
+            question_text: question.question_text || '',
+            option_a: question.option_a || '',
+            option_b: question.option_b || '',
+            option_c: question.option_c || '',
+            option_d: question.option_d || '',
+            correct_answer: question.correct_answer || 'A',
+            difficulty: question.difficulty || 'medium',
+            category_id: question.category_id || ''
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        alert('Gagal memuat soal.')
+        router.push('/admin/questions')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) fetchData()
+  }, [id])
+
+  // 2. Handle Update Data
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setSaving(true)
 
     try {
-      const payload = {
-        ...formData,
-        // Konversi string kosong ke null untuk category_id
-        category_id: formData.category_id ? parseInt(formData.category_id) : null
-      }
+      const { error } = await supabase
+        .from('questions')
+        .update({
+            question_text: formData.question_text,
+            option_a: formData.option_a,
+            option_b: formData.option_b,
+            option_c: formData.option_c,
+            option_d: formData.option_d,
+            correct_answer: formData.correct_answer,
+            difficulty: formData.difficulty,
+            category_id: formData.category_id ? parseInt(formData.category_id) : null
+        })
+        .eq('id', id)
 
-      const { error } = await supabase.from('questions').insert(payload)
       if (error) throw error
 
-      // Redirect ke list setelah sukses
+      // Redirect kembali ke list setelah sukses
       router.push('/admin/questions')
-      router.refresh()
       
-    } catch (error: any) {
-      alert('Gagal menyimpan: ' + error.message)
+    } catch (error) {
+      alert('Gagal menyimpan perubahan.')
+      console.error(error)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
+
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">Memuat data soal...</div>
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 font-sans">
@@ -72,19 +116,17 @@ export default function NewQuestionPage() {
             <Button variant="ghost" onClick={() => router.back()} className="text-slate-400 hover:text-white">
                 <ArrowLeft className="w-5 h-5 mr-2" /> Kembali
             </Button>
-            <h1 className="text-2xl font-bold text-white">Buat Soal Baru</h1>
+            <h1 className="text-2xl font-bold text-white">Edit Soal</h1>
         </div>
 
         {/* Form Card */}
         <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                    <PlusCircle className="w-5 h-5 text-indigo-500" /> Formulir Soal
-                </CardTitle>
-                <CardDescription>Masukkan detail pertanyaan baru ke dalam database.</CardDescription>
+                <CardTitle className="text-white">Formulir Perubahan</CardTitle>
+                <CardDescription>Perbarui konten soal di bawah ini.</CardDescription>
             </CardHeader>
             <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleUpdate} className="space-y-6">
                     
                     {/* Pertanyaan */}
                     <div className="space-y-2">
@@ -93,14 +135,13 @@ export default function NewQuestionPage() {
                             required
                             value={formData.question_text}
                             onChange={(e) => setFormData({...formData, question_text: e.target.value})}
-                            className="w-full min-h-[100px] bg-slate-950 border border-slate-700 rounded-md p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-600"
-                            placeholder="Contoh: Siapakah penemu gaya gravitasi?"
+                            className="w-full min-h-[100px] bg-slate-950 border border-slate-700 rounded-md p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Tulis pertanyaan di sini..."
                         />
                     </div>
 
                     {/* Opsi Jawaban Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Opsi A */}
                         <div className="space-y-2">
                             <Label className="text-slate-300 flex items-center justify-between">
                                 Opsi A
@@ -108,14 +149,11 @@ export default function NewQuestionPage() {
                             </Label>
                             <Input 
                                 required
-                                placeholder="Jawaban A"
                                 value={formData.option_a}
                                 onChange={(e) => setFormData({...formData, option_a: e.target.value})}
                                 className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'A' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
                             />
                         </div>
-
-                        {/* Opsi B */}
                         <div className="space-y-2">
                             <Label className="text-slate-300 flex items-center justify-between">
                                 Opsi B
@@ -123,14 +161,11 @@ export default function NewQuestionPage() {
                             </Label>
                             <Input 
                                 required
-                                placeholder="Jawaban B"
                                 value={formData.option_b}
                                 onChange={(e) => setFormData({...formData, option_b: e.target.value})}
                                 className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'B' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
                             />
                         </div>
-
-                        {/* Opsi C */}
                         <div className="space-y-2">
                             <Label className="text-slate-300 flex items-center justify-between">
                                 Opsi C
@@ -138,14 +173,11 @@ export default function NewQuestionPage() {
                             </Label>
                             <Input 
                                 required
-                                placeholder="Jawaban C"
                                 value={formData.option_c}
                                 onChange={(e) => setFormData({...formData, option_c: e.target.value})}
                                 className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'C' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
                             />
                         </div>
-
-                        {/* Opsi D */}
                         <div className="space-y-2">
                             <Label className="text-slate-300 flex items-center justify-between">
                                 Opsi D
@@ -153,7 +185,6 @@ export default function NewQuestionPage() {
                             </Label>
                             <Input 
                                 required
-                                placeholder="Jawaban D"
                                 value={formData.option_d}
                                 onChange={(e) => setFormData({...formData, option_d: e.target.value})}
                                 className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'D' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
@@ -161,7 +192,6 @@ export default function NewQuestionPage() {
                         </div>
                     </div>
 
-                    {/* Metadata Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-800">
                         
                         {/* Kunci Jawaban */}
@@ -209,22 +239,23 @@ export default function NewQuestionPage() {
                                 ))}
                             </select>
                         </div>
+
                     </div>
 
                     {/* Tombol Simpan */}
                     <div className="flex justify-end pt-6">
                         <Button 
                             type="submit" 
-                            disabled={loading}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[200px] shadow-lg shadow-indigo-500/20"
+                            disabled={saving}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[150px] shadow-lg shadow-indigo-500/20"
                         >
-                            {loading ? (
+                            {saving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="w-4 h-4 mr-2" /> Simpan Soal
+                                    <Save className="w-4 h-4 mr-2" /> Simpan Perubahan
                                 </>
                             )}
                         </Button>

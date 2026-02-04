@@ -140,7 +140,7 @@ export default function LoginPage() {
               </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-4 pt-2">
+           <CardFooter className="flex flex-col space-y-4 pt-2">
               <Button 
                 onClick={handleLogin}
                 className={`w-full h-12 text-white font-semibold shadow-lg transition-all hover:scale-[1.02] ${isTeacherMode ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/30'}`} 
@@ -161,13 +161,23 @@ export default function LoginPage() {
 
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
 
+              {/* PERUBAHAN DI SINI: Hilangkan kondisi !isTeacherMode agar link muncul untuk semua */}
+              <p className="text-sm text-center text-gray-400">
+                {isTeacherMode ? 'Belum terdaftar sebagai pengajar? ' : 'Belum punya akun? '}
+                <Link href="/auth/register" className={`text-transparent bg-clip-text font-semibold transition-all ${isTeacherMode ? 'bg-gradient-to-r from-blue-400 to-indigo-400 hover:from-blue-300 hover:to-indigo-300' : 'bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-300 hover:to-pink-300'}`}>
+                  {isTeacherMode ? 'Daftar Akun Guru' : 'Daftar di sini'}
+                </Link>
+              </p>
+              
+              {/* Link Main Tamu hanya muncul untuk Siswa (Opsional, tapi masuk akal) */}
               {!isTeacherMode && (
-                <p className="text-sm text-center text-gray-400">
-                  Belum punya akun?{' '}
-                  <Link href="/auth/register" className="text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text hover:from-purple-300 hover:to-pink-300 font-semibold transition-all">
-                    Daftar di sini
-                  </Link>
-                </p>
+                 <Link 
+                  href="/" 
+                  className="text-sm text-center text-gray-500 hover:text-gray-300 transition-colors flex items-center justify-center gap-1 group"
+                >
+                  <Sparkles className="w-4 h-4 group-hover:text-yellow-400 transition-colors" />
+                  Main sebagai tamu saja
+                </Link>
               )}
             </CardFooter>
           </div>
