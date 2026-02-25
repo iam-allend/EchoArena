@@ -38,6 +38,19 @@ export default function Home() {
   
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const hasVisitedHome = sessionStorage.getItem('visitedHome')
+
+      if (!hasVisitedHome) {
+        sessionStorage.setItem('visitedHome', 'true')
+        router.replace('/dashboard')
+      }
+    }
+  }, [isLoggedIn])
+
   useEffect(() => {
     checkExistingAuth()
   }, [])
@@ -49,13 +62,13 @@ export default function Home() {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session) {
-        router.push('/dashboard')
+        setIsLoggedIn(true)
         return
       }
-
+ 
       const guestAccount = getGuestAccountFromStorage()
       if (guestAccount) {
-        router.push('/dashboard')
+        setIsLoggedIn(true)
         return
       }
     } catch (error) {
@@ -64,6 +77,8 @@ export default function Home() {
       setCheckingAuth(false)
     }
   }
+
+  
 
   async function handlePlayAsGuest() {
     setLoading(true)
@@ -147,44 +162,59 @@ export default function Home() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center pt-6 sm:pt-10">
-            <Button
-              size="lg"
-              onClick={handlePlayAsGuest}
-              disabled={loading}
-              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6 animate-spin" />
-                  Membuat akun...
-                </>
-              ) : (
-                <>
-                  <Zap className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
-                  Main sebagai Tamu
-                </>
-              )}
-            </Button>
+            
+            {!isLoggedIn ? (
+              <>
+                <Button
+                  size="lg"
+                  onClick={handlePlayAsGuest}
+                  disabled={loading}
+                  className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6 animate-spin" />
+                      Membuat akun...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+                      Main sebagai Tamu
+                    </>
+                  )}
+                </Button>
 
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => router.push('/auth/register')}
-              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg border-purple-400/60 hover:bg-purple-500/10 text-white font-bold transition-all hover:scale-105"
-            >
-              <Sparkles className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
-              Buat Akun
-            </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => router.push('/auth/register')}
+                  className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg border-purple-400/60 hover:bg-purple-500/10 text-white font-bold transition-all hover:scale-105"
+                >
+                  <Sparkles className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+                  Buat Akun
+                </Button>
 
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => router.push('/auth/login')}
-              className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg text-white hover:bg-white/5 border border-white/20 transition-all hover:scale-105"
-            >
-              <Star className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
-              Masuk
-            </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  onClick={() => router.push('/auth/login')}
+                  className="w-full sm:w-auto min-w-[220px] py-6 sm:py-7 text-base sm:text-lg text-white hover:bg-white/5 border border-white/20 transition-all hover:scale-105"
+                >
+                  <Star className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+                  Masuk
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                onClick={() => router.push('/dashboard')}
+                className="w-full sm:w-auto min-w-[260px] py-6 sm:py-7 text-base sm:text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-110"
+              >
+                <Target className="mr-2 h-5 w-5 sm:mr-3 sm:h-6 sm:w-6" />
+                Masuk ke Dashboard
+              </Button>
+            )}
+            
           </div>
 
           {/* Guest Warning */}

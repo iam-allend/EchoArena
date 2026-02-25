@@ -15,7 +15,8 @@ import {
   Menu, 
   X,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Users,        // BARU
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -28,17 +29,38 @@ export default function AdminLayout({
   const pathname = usePathname()
   const supabase = createClient()
   
-  // --- STATE DARI KODE LAMA ---
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]             = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [adminName, setAdminName]         = useState('')
 
-  // --- LOGIKA AUTH (SAMA PERSIS DENGAN KODE LAMA) ---
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
+
       if (!session) {
-        router.push('/auth/login')
+        router.replace('/auth/login')
+        return
       }
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('username, is_admin, is_contributor, is_banned')
+        .eq('id', session.user.id)
+        .single()
+
+      if (!user || user.is_banned) {
+        await supabase.auth.signOut()
+        router.replace('/auth/login')
+        return
+      }
+
+      if (!user.is_admin) {
+        // Bukan admin — redirect ke panel yang sesuai
+        router.replace(user.is_contributor ? '/contributor' : '/dashboard')
+        return
+      }
+
+      setAdminName(user.username)
       setLoading(false)
     }
     checkUser()
@@ -46,48 +68,43 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.replace('/auth/login')
   }
 
-  // --- DAFTAR MENU (DIGABUNGKAN KE ARRAY BIAR RAPI DI SIDEBAR) ---
   const menuItems = [
     {
-      title: 'Statistik',
+      title: 'Data Statistik',
       href: '/admin/stats',
       icon: <TrendingUp className="w-5 h-5" />
     },
     {
-      title: 'Daftar Soal',
+      title: 'Managemen User',
+      href: '/admin/users',
+      icon: <Users className="w-5 h-5" />
+    },
+    {
+      title: 'Managemen Soal',
       href: '/admin/questions',
       icon: <LayoutDashboard className="w-5 h-5" />
     },
     {
-      title: 'Buat Soal',
-      href: '/admin/questions/new',
-      icon: <PlusCircle className="w-5 h-5" />
+      title: 'Managemen Materi',
+      href: '/admin/materials',
+      icon: <BookOpen className="w-5 h-5" />
+    },
+    {
+      title: 'Managemen Kontributor',
+      href: '/admin/contributors/verify',
+      icon: <Crown className="w-5 h-5" />
     },
     {
       title: 'Library Komunitas',
       href: '/admin/library',
       icon: <Globe className="w-5 h-5" />
     },
-    {
-      title: 'Kontributor Unggulan',
-      href: '/admin/contributors',
-      icon: <Crown className="w-5 h-5" />
-    },
-    {
-      title: 'Manajemen Materi',
-      href: '/admin/materials',
-      icon: <BookOpen className="w-5 h-5" />
-    },
-    {
-      title: 'Tambah Materi',
-      href: '/admin/materials/new',
-      icon: <PlusCircle className="w-5 h-5" />
-    },
     
   ]
+
 
   if (loading) {
     return (
@@ -100,11 +117,11 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden font-sans text-slate-100">
       
-      {/* 1. SIDEBAR (Desktop Only - Kiri) */}
+      {/* SIDEBAR (Desktop) */}
       <aside className="hidden md:flex w-72 flex-col bg-slate-900 border-r border-slate-800 flex-shrink-0">
         
-        {/* Logo Area */}
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
+        {/* Logo */}
+        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800 mt-7">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
             <Sparkles className="w-5 h-5" />
           </div>
@@ -114,10 +131,10 @@ export default function AdminLayout({
           </div>
         </div>
 
-        {/* Menu Items (Scrollable) */}
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link key={item.href} href={item.href}>
                 <div className={`
@@ -136,7 +153,6 @@ export default function AdminLayout({
             )
           })}
 
-          {/* Tombol Khusus: Buat Materi Baru (Shortcut) */}
           <div className="mt-4 pt-4 border-t border-slate-800 px-2">
             <Link href="/admin/profile">
               <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-900/20 border-0">
@@ -147,7 +163,7 @@ export default function AdminLayout({
           </div>
         </nav>
 
-        {/* Bottom Area (Logout) */}
+        {/* Logout */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
           <Button 
             variant="ghost" 
@@ -160,10 +176,10 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* 2. MOBILE HEADER & CONTENT WRAPPER */}
+      {/* MOBILE HEADER & CONTENT */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         
-        {/* Mobile Header (Hanya muncul di HP) */}
+        {/* Mobile Header */}
         <header className="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 flex-shrink-0 z-20 relative">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white">
@@ -176,10 +192,10 @@ export default function AdminLayout({
           </button>
         </header>
 
-        {/* 3. MAIN CONTENT (Scrollable Area) */}
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-slate-950 relative scroll-smooth">
           
-          {/* Mobile Sidebar Overlay (Dropdown Menu di HP) */}
+          {/* Mobile Sidebar Overlay */}
           {isMobileMenuOpen && (
             <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-sm md:hidden animate-in slide-in-from-top-5 fade-in duration-200 flex flex-col">
               <nav className="p-4 space-y-2 overflow-y-auto flex-1">
@@ -194,12 +210,6 @@ export default function AdminLayout({
                 
                 <div className="h-px bg-slate-800 my-4" />
                 
-                <Link href="/admin/materials/new" onClick={() => setIsMobileMenuOpen(false)}>
-                   <Button className="w-full bg-blue-600 h-12 text-lg">
-                      <PlusCircle className="mr-2 h-5 w-5" /> Buat Materi
-                   </Button>
-                </Link>
-
                 <Button 
                   variant="destructive" 
                   className="w-full justify-start mt-4 h-12" 
@@ -212,9 +222,8 @@ export default function AdminLayout({
             </div>
           )}
 
-          {/* Render Halaman Admin Disini (Children) */}
           <div className="p-4 md:p-8 max-w-[1600px] mx-auto w-full">
-             {children}
+            {children}
           </div>
 
         </main>

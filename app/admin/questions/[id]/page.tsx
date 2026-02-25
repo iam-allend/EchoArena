@@ -3,268 +3,246 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Loader2, Eraser, CheckCircle2 } from 'lucide-react'
+import {
+  ArrowLeft, Save, Loader2, BrainCircuit, CheckCircle2,
+} from 'lucide-react'
+
+const DIFFICULTIES = [
+  { value: 'easy',   label: 'Mudah',  color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/40',  activeBg: 'bg-green-500/20 border-green-400' },
+  { value: 'medium', label: 'Sedang', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/40', activeBg: 'bg-yellow-500/20 border-yellow-400' },
+  { value: 'hard',   label: 'Sulit',  color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/40',       activeBg: 'bg-red-500/20 border-red-400' },
+]
+
+const OPTIONS: { key: 'A' | 'B' | 'C' | 'D'; field: 'option_a' | 'option_b' | 'option_c' | 'option_d' }[] = [
+  { key: 'A', field: 'option_a' },
+  { key: 'B', field: 'option_b' },
+  { key: 'C', field: 'option_c' },
+  { key: 'D', field: 'option_d' },
+]
 
 export default function EditQuestionPage() {
   const { id } = useParams()
-  const router = useRouter()
+  const router  = useRouter()
   const supabase = createClient()
-  
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [categories, setCategories] = useState<any[]>([])
-  
-  // State Form
-  const [formData, setFormData] = useState({
+
+  const [fetching, setFetching]   = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
+
+  const [form, setForm] = useState({
     question_text: '',
-    option_a: '',
-    option_b: '',
-    option_c: '',
-    option_d: '',
-    correct_answer: 'A',
+    option_a: '', option_b: '', option_c: '', option_d: '',
+    correct_answer: 'A' as 'A' | 'B' | 'C' | 'D',
     difficulty: 'medium',
-    category_id: ''
+    category_id: '',
   })
 
-  // 1. Fetch Data Soal & Kategori saat halaman dibuka
   useEffect(() => {
-    async function fetchData() {
-      try {
-        // Ambil Data Categories untuk Dropdown
-        const { data: cats } = await supabase.from('categories').select('*')
-        if (cats) setCategories(cats)
+    async function load() {
+      const [{ data: cats }, { data: q, error }] = await Promise.all([
+        supabase.from('categories').select('id, name'),
+        supabase.from('questions').select('*').eq('id', id).single(),
+      ])
 
-        // Ambil Data Soal Berdasarkan ID
-        const { data: question, error } = await supabase
-          .from('questions')
-          .select('*')
-          .eq('id', id)
-          .single()
+      if (cats) setCategories(cats)
 
-        if (error) throw error
-
-        // Isi form dengan data lama
-        if (question) {
-          setFormData({
-            question_text: question.question_text || '',
-            option_a: question.option_a || '',
-            option_b: question.option_b || '',
-            option_c: question.option_c || '',
-            option_d: question.option_d || '',
-            correct_answer: question.correct_answer || 'A',
-            difficulty: question.difficulty || 'medium',
-            category_id: question.category_id || ''
-          })
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error)
-        alert('Gagal memuat soal.')
+      if (error || !q) {
+        alert('Soal tidak ditemukan.')
         router.push('/admin/questions')
-      } finally {
-        setLoading(false)
+        return
       }
+
+      setForm({
+        question_text: q.question_text || '',
+        option_a: q.option_a || '',
+        option_b: q.option_b || '',
+        option_c: q.option_c || '',
+        option_d: q.option_d || '',
+        correct_answer: q.correct_answer || 'A',
+        difficulty: q.difficulty || 'medium',
+        category_id: q.category_id ? String(q.category_id) : '',
+      })
+      setFetching(false)
     }
 
-    if (id) fetchData()
+    if (id) load()
   }, [id])
 
-  // 2. Handle Update Data
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
+  const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }))
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!form.option_a || !form.option_b || !form.option_c || !form.option_d) {
+      alert('Semua opsi jawaban (A, B, C, D) harus diisi.')
+      return
+    }
+
+    setSaving(true)
     try {
-      const { error } = await supabase
-        .from('questions')
-        .update({
-            question_text: formData.question_text,
-            option_a: formData.option_a,
-            option_b: formData.option_b,
-            option_c: formData.option_c,
-            option_d: formData.option_d,
-            correct_answer: formData.correct_answer,
-            difficulty: formData.difficulty,
-            category_id: formData.category_id ? parseInt(formData.category_id) : null
-        })
-        .eq('id', id)
+      const { error } = await supabase.from('questions').update({
+        ...form,
+        category_id: form.category_id ? parseInt(form.category_id) : null,
+      }).eq('id', id)
 
       if (error) throw error
-
-      // Redirect kembali ke list setelah sukses
       router.push('/admin/questions')
-      
-    } catch (error) {
-      alert('Gagal menyimpan perubahan.')
-      console.error(error)
+    } catch (err: any) {
+      alert('Gagal menyimpan: ' + err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">Memuat data soal...</div>
+  if (fetching) return (
+    <div className="min-h-[60vh] flex items-center justify-center text-slate-500 gap-3">
+      <Loader2 className="w-5 h-5 animate-spin" /> Memuat data soal...
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 font-sans">
-      
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header Navigasi */}
-        <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" onClick={() => router.back()} className="text-slate-400 hover:text-white">
-                <ArrowLeft className="w-5 h-5 mr-2" /> Kembali
-            </Button>
-            <h1 className="text-2xl font-bold text-white">Edit Soal</h1>
+    <div className="max-w-3xl mx-auto space-y-6 pb-8 font-sans">
+
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-6">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}
+          className="text-slate-400 hover:text-white hover:bg-slate-800 shrink-0">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <BrainCircuit className="text-indigo-400" /> Edit Soal
+          </h1>
+          <p className="text-slate-500 text-sm mt-0.5">Perbarui konten soal yang sudah ada.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Teks Pertanyaan */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-3">
+          <Label className="text-slate-300 font-semibold">Teks Pertanyaan <span className="text-red-400">*</span></Label>
+          <textarea
+            required
+            rows={4}
+            value={form.question_text}
+            onChange={e => set('question_text', e.target.value)}
+            placeholder="Tulis pertanyaan di sini..."
+            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 resize-none"
+          />
         </div>
 
-        {/* Form Card */}
-        <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-                <CardTitle className="text-white">Formulir Perubahan</CardTitle>
-                <CardDescription>Perbarui konten soal di bawah ini.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleUpdate} className="space-y-6">
-                    
-                    {/* Pertanyaan */}
-                    <div className="space-y-2">
-                        <Label className="text-slate-300">Teks Pertanyaan</Label>
-                        <textarea
-                            required
-                            value={formData.question_text}
-                            onChange={(e) => setFormData({...formData, question_text: e.target.value})}
-                            className="w-full min-h-[100px] bg-slate-950 border border-slate-700 rounded-md p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Tulis pertanyaan di sini..."
-                        />
+        {/* Opsi Jawaban */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <Label className="text-slate-300 font-semibold">Opsi Jawaban <span className="text-red-400">*</span></Label>
+            <span className="text-xs text-slate-500">Klik label opsi untuk menjadikannya kunci jawaban</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {OPTIONS.map(({ key, field }) => {
+              const isCorrect = form.correct_answer === key
+              return (
+                <div key={key}
+                  className={`rounded-xl border transition-all ${
+                    isCorrect
+                      ? 'border-green-500/60 bg-green-500/5'
+                      : 'border-slate-700 bg-slate-950/50'
+                  }`}>
+                  <button
+                    type="button"
+                    onClick={() => set('correct_answer', key)}
+                    className={`w-full flex items-center gap-2 px-3 pt-2.5 pb-1 text-left transition-colors rounded-t-xl ${
+                      isCorrect ? 'text-green-400' : 'text-slate-500 hover:text-slate-300'
+                    }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border transition-all ${
+                      isCorrect
+                        ? 'bg-green-500 border-green-400 text-white'
+                        : 'border-slate-600 text-slate-400'
+                    }`}>
+                      {isCorrect ? <CheckCircle2 className="w-3.5 h-3.5" /> : key}
                     </div>
+                    <span className="text-xs font-bold uppercase tracking-wide">
+                      {isCorrect ? 'Kunci Jawaban ✓' : `Opsi ${key}`}
+                    </span>
+                  </button>
+                  <div className="px-3 pb-3">
+                    <Input
+                      required
+                      placeholder={`Jawaban ${key}...`}
+                      value={form[field]}
+                      onChange={e => set(field, e.target.value)}
+                      className={`bg-transparent border-0 border-b text-white placeholder:text-slate-600 rounded-none focus-visible:ring-0 px-0 text-sm h-9 ${
+                        isCorrect ? 'border-green-700' : 'border-slate-800'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
 
-                    {/* Opsi Jawaban Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="text-slate-300 flex items-center justify-between">
-                                Opsi A
-                                {formData.correct_answer === 'A' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                            </Label>
-                            <Input 
-                                required
-                                value={formData.option_a}
-                                onChange={(e) => setFormData({...formData, option_a: e.target.value})}
-                                className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'A' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-slate-300 flex items-center justify-between">
-                                Opsi B
-                                {formData.correct_answer === 'B' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                            </Label>
-                            <Input 
-                                required
-                                value={formData.option_b}
-                                onChange={(e) => setFormData({...formData, option_b: e.target.value})}
-                                className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'B' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-slate-300 flex items-center justify-between">
-                                Opsi C
-                                {formData.correct_answer === 'C' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                            </Label>
-                            <Input 
-                                required
-                                value={formData.option_c}
-                                onChange={(e) => setFormData({...formData, option_c: e.target.value})}
-                                className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'C' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-slate-300 flex items-center justify-between">
-                                Opsi D
-                                {formData.correct_answer === 'D' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                            </Label>
-                            <Input 
-                                required
-                                value={formData.option_d}
-                                onChange={(e) => setFormData({...formData, option_d: e.target.value})}
-                                className={`bg-slate-950 border-slate-700 text-white ${formData.correct_answer === 'D' ? 'border-green-500 ring-1 ring-green-500' : ''}`}
-                            />
-                        </div>
-                    </div>
+          <div className="flex items-center gap-2 pt-2 text-xs text-slate-500">
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+            Kunci jawaban saat ini: <span className="font-bold text-green-400">Opsi {form.correct_answer}</span>
+          </div>
+        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-800">
-                        
-                        {/* Kunci Jawaban */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-300">Kunci Jawaban</Label>
-                            <select
-                                value={formData.correct_answer}
-                                onChange={(e) => setFormData({...formData, correct_answer: e.target.value})}
-                                className="w-full h-10 bg-slate-950 border border-slate-700 rounded-md px-3 text-white focus:outline-none focus:border-indigo-500"
-                            >
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="C">C</option>
-                                <option value="D">D</option>
-                            </select>
-                        </div>
+        {/* Metadata */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4">
+          <Label className="text-slate-300 font-semibold block">Pengaturan Soal</Label>
 
-                        {/* Tingkat Kesulitan */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-300">Tingkat Kesulitan</Label>
-                            <select
-                                value={formData.difficulty}
-                                onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
-                                className="w-full h-10 bg-slate-950 border border-slate-700 rounded-md px-3 text-white focus:outline-none focus:border-indigo-500"
-                            >
-                                <option value="easy">Easy (Mudah)</option>
-                                <option value="medium">Medium (Sedang)</option>
-                                <option value="hard">Hard (Sulit)</option>
-                            </select>
-                        </div>
+          <div className="space-y-2">
+            <Label className="text-slate-500 text-xs uppercase tracking-wide">Tingkat Kesulitan</Label>
+            <div className="flex gap-2">
+              {DIFFICULTIES.map(d => (
+                <button key={d.value} type="button"
+                  onClick={() => set('difficulty', d.value)}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-all ${
+                    form.difficulty === d.value
+                      ? `${d.activeBg} ${d.color}`
+                      : `${d.bg} text-slate-500 hover:text-slate-300`
+                  }`}>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                         {/* Kategori */}
-                         <div className="space-y-2">
-                            <Label className="text-slate-300">Kategori</Label>
-                            <select
-                                value={formData.category_id}
-                                onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-                                className="w-full h-10 bg-slate-950 border border-slate-700 rounded-md px-3 text-white focus:outline-none focus:border-indigo-500"
-                            >
-                                <option value="">-- Pilih Kategori --</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+          <div className="space-y-2">
+            <Label className="text-slate-500 text-xs uppercase tracking-wide">Kategori</Label>
+            <select
+              value={form.category_id}
+              onChange={e => set('category_id', e.target.value)}
+              className="w-full h-10 bg-slate-950 border border-slate-700 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="">— Tanpa Kategori —</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-                    </div>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={() => router.back()}
+            className="text-slate-400 hover:text-white hover:bg-slate-800">
+            Batal
+          </Button>
+          <Button type="submit" disabled={saving}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[160px] shadow-lg shadow-indigo-900/30">
+            {saving
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan...</>
+              : <><Save className="w-4 h-4 mr-2" /> Simpan Perubahan</>
+            }
+          </Button>
+        </div>
 
-                    {/* Tombol Simpan */}
-                    <div className="flex justify-end pt-6">
-                        <Button 
-                            type="submit" 
-                            disabled={saving}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[150px] shadow-lg shadow-indigo-500/20"
-                        >
-                            {saving ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4 mr-2" /> Simpan Perubahan
-                                </>
-                            )}
-                        </Button>
-                    </div>
-
-                </form>
-            </CardContent>
-        </Card>
-      </div>
+      </form>
     </div>
   )
 }

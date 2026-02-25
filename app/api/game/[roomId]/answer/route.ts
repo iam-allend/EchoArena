@@ -23,7 +23,7 @@ export async function POST(
       p_user_id: userId,
       p_question_id: questionId,
       p_selected_answer: selectedAnswer,
-      p_time_taken: timeTaken,
+      p_time_taken: timeTaken,  
       p_voice_transcript: voiceTranscript,
     })
 
