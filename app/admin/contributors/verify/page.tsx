@@ -19,7 +19,7 @@ interface ContributorData {
   institution?: string
   phone?: string
   address?: string
-  ktp_url?: string
+  ktp_path?: string  // storage path, bukan URL
 }
 
 interface Contributor {
@@ -243,13 +243,16 @@ function RevokeModal({ targets, onConfirm, onCancel, loading }: {
 
 // ─── Detail Drawer ────────────────────────────────────────────────────────────
 
-function ContributorDrawer({ c, onClose, onApprove, onReject, onRevoke, actionLoading }: {
+function ContributorDrawer({ c, onClose, onApprove, onReject, onRevoke, actionLoading, ktpLoading, ktpSignedUrl, onLoadKtp }: {
   c: Contributor
   onClose: () => void
   onApprove: (t: Contributor[]) => void
   onReject: (t: Contributor[]) => void
   onRevoke: (t: Contributor[]) => void
   actionLoading: boolean
+  ktpLoading: boolean
+  ktpSignedUrl: string | null
+  onLoadKtp: (path: string) => void
 }) {
   const d = c.contributor_data || {}
 
@@ -307,15 +310,30 @@ function ContributorDrawer({ c, onClose, onApprove, onReject, onRevoke, actionLo
             </div>
           </div>
 
-          {/* Foto KTP */}
-          {d.ktp_url && (
+          {/* Foto KTP — private bucket, pakai signed URL */}
+          {d.ktp_path && (
             <div>
               <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Foto KTP</p>
-              <a href={d.ktp_url} target="_blank" rel="noreferrer"
-                className="block rounded-xl overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors group">
-                <img src={d.ktp_url} alt="KTP" className="w-full object-cover group-hover:opacity-90 transition-opacity" />
-                <div className="p-2 bg-slate-800 text-xs text-blue-400 text-center">Buka di tab baru →</div>
-              </a>
+              {ktpLoading ? (
+                <div className="rounded-xl border border-slate-700 p-6 flex items-center justify-center gap-2 text-slate-500 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Memuat foto KTP...
+                </div>
+              ) : ktpSignedUrl ? (
+                <a href={ktpSignedUrl} target="_blank" rel="noreferrer"
+                  className="block rounded-xl overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors group">
+                  <img src={ktpSignedUrl} alt="KTP" className="w-full object-cover group-hover:opacity-90 transition-opacity" />
+                  <div className="p-2 bg-slate-800 text-xs text-blue-400 text-center">Buka di tab baru → (link berlaku 1 jam)</div>
+                </a>
+              ) : (
+                <div className="rounded-xl border border-slate-700 p-4 flex items-center justify-between">
+                  <span className="text-slate-500 text-sm">Foto KTP tersedia</span>
+                  <button
+                    onClick={() => onLoadKtp(d.ktp_path!)}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline">
+                    Muat foto
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -423,6 +441,8 @@ export default function ContributorsVerifyPage() {
   const [rejectModal, setRejectModal]   = useState<Contributor[] | null>(null)
   const [revokeModal, setRevokeModal]   = useState<Contributor[] | null>(null)
   const [drawer, setDrawer]             = useState<Contributor | null>(null)
+  const [ktpSignedUrl, setKtpSignedUrl] = useState<string | null>(null)
+  const [ktpLoading, setKtpLoading]     = useState(false)
 
   const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 })
 
@@ -458,6 +478,24 @@ export default function ContributorsVerifyPage() {
   }, [])
 
   useEffect(() => { fetchContributors() }, [fetchContributors])
+
+  // ── Generate signed URL untuk preview KTP (berlaku 1 jam) ─────────────────
+
+  const loadKtpSignedUrl = async (ktpPath: string) => {
+    setKtpSignedUrl(null)
+    setKtpLoading(true)
+    try {
+      const { data, error } = await supabase.storage
+        .from('contributor-docs')
+        .createSignedUrl(ktpPath, 3600)
+      if (error) throw error
+      setKtpSignedUrl(data.signedUrl)
+    } catch (err) {
+      console.error('Gagal generate signed URL:', err)
+    } finally {
+      setKtpLoading(false)
+    }
+  }
 
   // ── Filter ─────────────────────────────────────────────────────────────────
 
@@ -785,7 +823,7 @@ export default function ContributorsVerifyPage() {
                             {/* Detail — selalu tampil */}
                             <Button variant="ghost" size="icon"
                               className="h-8 w-8 text-slate-500 hover:text-white hover:bg-slate-700"
-                              onClick={() => setDrawer(c)} title="Lihat detail">
+                              onClick={() => { setDrawer(c); setKtpSignedUrl(null); if (c.contributor_data?.ktp_path) loadKtpSignedUrl(c.contributor_data.ktp_path) }} title="Lihat detail">
                               <Eye className="w-4 h-4" />
                             </Button>
 
@@ -865,7 +903,10 @@ export default function ContributorsVerifyPage() {
           onApprove={t => { setDrawer(null); setApproveModal(t) }}
           onReject={t => { setDrawer(null); setRejectModal(t) }}
           onRevoke={t => { setDrawer(null); setRevokeModal(t) }}
-          actionLoading={actionLoading} />
+          actionLoading={actionLoading}
+          ktpLoading={ktpLoading}
+          ktpSignedUrl={ktpSignedUrl}
+          onLoadKtp={loadKtpSignedUrl} />
       )}
     </>
   )

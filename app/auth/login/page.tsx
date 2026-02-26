@@ -57,12 +57,13 @@ export default function LoginPage() {
 
       // Redirect berdasarkan role — tidak peduli mode toggle
       if (user.is_admin) {
-        router.push('/admin')
+        router.push('/admin/stats')
       } else if (user.is_contributor) {
         router.push('/contributor')
       } else if (user.contributor_status === 'pending') {
         // Guru yang belum diverifikasi → dashboard biasa + notif
-        router.push('/dashboard?status=pending_contributor')
+        router.push('/contributor')
+        
       } else {
         router.push('/dashboard')
       }

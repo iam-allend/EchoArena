@@ -7,7 +7,7 @@ import {
   BrainCircuit, BookOpen, PlusCircle, TrendingUp, Sparkles,
   Crown, CheckCircle2, Clock, XCircle, AlertCircle, Upload,
   User, Building2, Phone, MapPin, FileText, Image as ImageIcon,
-  Loader2, ChevronRight, Lock, ArrowRight, RefreshCw,
+  Loader2, ChevronRight, Lock, ArrowRight, RefreshCw, Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,7 @@ interface UserData {
     institution?: string
     phone?: string
     address?: string
-    ktp_url?: string
+    ktp_path?: string
   } | null
   contributor_applied_at: string | null
   contributor_reviewed_at: string | null
@@ -41,6 +41,86 @@ interface VerifForm {
   institution: string
   phone: string
   address: string
+}
+
+// ─── Confirmation Modal ───────────────────────────────────────────────────────
+
+function ConfirmModal({
+  type, form, onConfirm, onCancel, loading,
+}: {
+  type: 'submit' | 'resubmit'
+  form: VerifForm
+  onConfirm: () => void
+  onCancel: () => void
+  loading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+
+        <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+          type === 'resubmit' ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-blue-500/10 border border-blue-500/20'
+        }`}>
+          <Send className={`w-7 h-7 ${type === 'resubmit' ? 'text-amber-400' : 'text-blue-400'}`} />
+        </div>
+
+        <h3 className="text-lg font-bold text-white text-center mb-1">
+          {type === 'resubmit' ? 'Kirim Ulang Verifikasi?' : 'Kirim Data Verifikasi?'}
+        </h3>
+        <p className="text-slate-400 text-sm text-center mb-5">
+          {type === 'resubmit'
+            ? 'Data lama akan diganti. Pastikan semua informasi sudah benar.'
+            : 'Pastikan semua data sudah benar sebelum dikirim ke admin untuk direview.'
+          }
+        </p>
+
+        {/* Ringkasan data */}
+        <div className="bg-slate-800/60 rounded-xl p-4 space-y-2 mb-5 text-xs">
+          {[
+            { label: 'Nama',      value: form.full_name },
+            { label: 'NIP/NIK',   value: form.nip },
+            { label: 'Institusi', value: form.institution },
+          ].map(f => (
+            <div key={f.label} className="flex justify-between gap-3">
+              <span className="text-slate-500 shrink-0">{f.label}</span>
+              <span className="text-white font-medium text-right truncate">{f.value || '—'}</span>
+            </div>
+          ))}
+          <div className="flex justify-between gap-3 pt-1 border-t border-slate-700">
+            <span className="text-slate-500 shrink-0">Foto KTP</span>
+            <span className="text-emerald-400 font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Sudah diunggah
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            variant="ghost"
+            className="flex-1 border border-slate-700 text-slate-300 hover:bg-slate-800"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Periksa Lagi
+          </Button>
+          <Button
+            className={`flex-1 font-bold text-white ${
+              type === 'resubmit'
+                ? 'bg-amber-600 hover:bg-amber-700'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mengirim...</>
+              : <><Send className="w-4 h-4 mr-2" /> Ya, Kirim</>
+            }
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -85,23 +165,24 @@ function LockedMenuCard({ icon, label }: { icon: React.ReactNode; label: string 
 export default function ContributorDashboard() {
   const supabase = createClient()
 
-  const [user, setUser]         = useState<UserData | null>(null)
-  const [loading, setLoading]   = useState(true)
+  const [user, setUser]             = useState<UserData | null>(null)
+  const [loading, setLoading]       = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [uploadingKtp, setUploadingKtp] = useState(false)
-  const [submitDone, setSubmitDone] = useState(false)
-  const [error, setError]       = useState('')
+  const [error, setError]           = useState('')
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const [form, setForm] = useState<VerifForm>({
     full_name: '', nip: '', institution: '', phone: '', address: '',
   })
-  const [ktpUrl, setKtpUrl]     = useState('')
+  const [ktpPath, setKtpPath]       = useState('')
   const [ktpPreview, setKtpPreview] = useState('')
-  const fileRef                 = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // ── Load user ────────────────────────────────────────────────────────────
 
   async function loadUser() {
+    setLoading(true)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
@@ -118,9 +199,8 @@ export default function ContributorDashboard() {
 
     if (data) {
       setUser(data as UserData)
-      // Pre-fill form jika sudah pernah isi
       if (data.contributor_data && Object.keys(data.contributor_data).length > 0) {
-        const d = data.contributor_data as VerifForm & { ktp_url?: string }
+        const d = data.contributor_data as VerifForm & { ktp_path?: string }
         setForm({
           full_name:   d.full_name   || '',
           nip:         d.nip         || '',
@@ -128,7 +208,13 @@ export default function ContributorDashboard() {
           phone:       d.phone       || '',
           address:     d.address     || '',
         })
-        if (d.ktp_url) { setKtpUrl(d.ktp_url); setKtpPreview(d.ktp_url) }
+        if (d.ktp_path) {
+          setKtpPath(d.ktp_path)
+          const { data: signed } = await supabase.storage
+            .from('contributor-docs')
+            .createSignedUrl(d.ktp_path, 3600)
+          if (signed) setKtpPreview(signed.signedUrl)
+        }
       }
     }
     setLoading(false)
@@ -142,13 +228,11 @@ export default function ContributorDashboard() {
     if (!user) return
     if (file.size > 5 * 1024 * 1024) { setError('Ukuran file maks 5MB'); return }
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Format file harus JPG, PNG, atau WebP')
-      return
+      setError('Format file harus JPG, PNG, atau WebP'); return
     }
 
     setUploadingKtp(true)
     setError('')
-
     try {
       const ext  = file.name.split('.').pop()
       const path = `ktp/${user.id}/ktp.${ext}`
@@ -159,12 +243,13 @@ export default function ContributorDashboard() {
 
       if (upErr) throw upErr
 
-      const { data: urlData } = supabase.storage
-        .from('contributor-docs')
-        .getPublicUrl(path)
+      setKtpPath(path)
 
-      setKtpUrl(urlData.publicUrl)
-      setKtpPreview(URL.createObjectURL(file))
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('contributor-docs')
+        .createSignedUrl(path, 3600)
+
+      setKtpPreview(signErr || !signed ? URL.createObjectURL(file) : signed.signedUrl)
     } catch (err: any) {
       setError('Gagal upload KTP: ' + err.message)
     } finally {
@@ -172,52 +257,64 @@ export default function ContributorDashboard() {
     }
   }
 
-  // ── Submit verifikasi ────────────────────────────────────────────────────
+  // ── Validasi → buka modal konfirmasi ─────────────────────────────────────
 
-  async function handleSubmitVerif(e: React.FormEvent) {
+  function handleClickSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-
-    if (!form.full_name.trim()) { setError('Nama lengkap wajib diisi'); return }
-    if (!form.nip.trim())       { setError('NIP/NIDN/NIK wajib diisi'); return }
+    if (!form.full_name.trim())   { setError('Nama lengkap wajib diisi'); return }
+    if (!form.nip.trim())         { setError('NIP/NIDN/NIK wajib diisi'); return }
     if (!form.institution.trim()) { setError('Institusi wajib diisi'); return }
-    if (!ktpUrl)                { setError('Foto KTP wajib diunggah'); return }
-    if (!user)                  return
+    if (!ktpPath)                 { setError('Foto KTP wajib diunggah'); return }
+    setShowConfirm(true)
+  }
 
+  // ── Eksekusi submit setelah konfirmasi ───────────────────────────────────
+
+  async function executeSubmit() {
+    if (!user) return
     setSubmitting(true)
     try {
       const { error: dbErr } = await supabase
         .from('users')
         .update({
-          contributor_status:       'pending',
-          contributor_applied_at:   new Date().toISOString(),
-          contributor_reviewed_at:  null,
-          contributor_review_note:  null,
+          contributor_status:      'pending',
+          contributor_applied_at:  new Date().toISOString(),
+          contributor_reviewed_at: null,
+          contributor_review_note: null,
           contributor_data: {
             full_name:   form.full_name.trim(),
             nip:         form.nip.trim(),
             institution: form.institution.trim(),
             phone:       form.phone.trim(),
             address:     form.address.trim(),
-            ktp_url:     ktpUrl,
+            ktp_path:    ktpPath,
           },
         })
         .eq('id', user.id)
 
       if (dbErr) throw dbErr
 
-      setSubmitDone(true)
+      setShowConfirm(false)
+      // Auto-refresh → langsung render tampilan "Menunggu Verifikasi"
       await loadUser()
+
     } catch (err: any) {
       setError('Gagal mengirim data: ' + err.message)
+      setShowConfirm(false)
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Derived state ────────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────
 
-  const hasFilledData = !!(user?.contributor_data && Object.keys(user.contributor_data).length > 0 && user.contributor_data.ktp_url)
+  const hasFilledData = !!(
+    user?.contributor_data &&
+    Object.keys(user.contributor_data).length > 0 &&
+    user.contributor_data.ktp_path
+  )
+  const isRejected = user?.contributor_status === 'rejected'
 
   const quickActions = [
     { label: 'Tambah Soal Baru',   href: '/contributor/questions/new', icon: <PlusCircle className="w-5 h-5" />, color: 'from-indigo-600 to-purple-600' },
@@ -235,7 +332,7 @@ export default function ContributorDashboard() {
     </div>
   )
 
-  // ── APPROVED — dashboard penuh ───────────────────────────────────────────
+  // ── APPROVED ─────────────────────────────────────────────────────────────
 
   if (user?.is_contributor || user?.contributor_status === 'approved') {
     return (
@@ -250,11 +347,10 @@ export default function ContributorDashboard() {
           </div>
           <StatusBadge status="approved" hasData />
         </div>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Level', value: user?.level, icon: <TrendingUp className="w-5 h-5" />, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
-            { label: 'Total Game', value: user?.total_games, icon: <Sparkles className="w-5 h-5" />, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+            { label: 'Level',      value: user?.level,       icon: <TrendingUp className="w-5 h-5" />, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+            { label: 'Total Game', value: user?.total_games, icon: <Sparkles className="w-5 h-5" />,   color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
           ].map(c => (
             <div key={c.label} className={`rounded-xl p-4 border ${c.bg}`}>
               <div className={`flex items-center gap-2 text-xs mb-2 ${c.color} opacity-80`}>
@@ -265,7 +361,6 @@ export default function ContributorDashboard() {
             </div>
           ))}
         </div>
-
         <div>
           <h2 className="text-lg font-bold text-white mb-3">Aksi Cepat</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -283,9 +378,9 @@ export default function ContributorDashboard() {
     )
   }
 
-  // ── PENDING + sudah isi data — menunggu review ───────────────────────────
+  // ── PENDING + data sudah diisi ────────────────────────────────────────────
 
-  if (user?.contributor_status === 'pending' && hasFilledData && !submitDone) {
+  if (user?.contributor_status === 'pending' && hasFilledData) {
     const d = user.contributor_data!
     return (
       <div className="max-w-2xl mx-auto space-y-6 pb-8 font-sans">
@@ -296,24 +391,23 @@ export default function ContributorDashboard() {
           <p className="text-slate-400 mt-1">Data kamu sedang direview oleh admin EchoArena.</p>
         </div>
 
-        {/* Timeline status */}
+        {/* Timeline */}
         <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-5">
           <h2 className="font-bold text-white text-sm uppercase tracking-wide">Status Pengajuan</h2>
           <div className="space-y-0">
             {[
-              { done: true,  active: false, label: 'Akun dibuat',              sub: 'Registrasi berhasil' },
-              { done: true,  active: false, label: 'Email diverifikasi',       sub: 'Akun aktif' },
-              { done: true,  active: false, label: 'Data pendidik dikirim',    sub: user.contributor_applied_at ? new Date(user.contributor_applied_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '' },
-              { done: false, active: true,  label: 'Review oleh admin',        sub: 'Sedang diproses...' },
-              { done: false, active: false, label: 'Akses kontributor aktif',  sub: 'Belum selesai' },
+              { done: true,  active: false, label: 'Akun dibuat',             sub: 'Registrasi berhasil' },
+              { done: true,  active: false, label: 'Email diverifikasi',      sub: 'Akun aktif' },
+              { done: true,  active: false, label: 'Data pendidik dikirim',   sub: user.contributor_applied_at ? new Date(user.contributor_applied_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '' },
+              { done: false, active: true,  label: 'Review oleh admin',       sub: 'Sedang diproses...' },
+              { done: false, active: false, label: 'Akses kontributor aktif', sub: 'Belum selesai' },
             ].map((s, i, arr) => (
               <div key={i} className="flex gap-4">
-                {/* Line + dot */}
                 <div className="flex flex-col items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ${
                     s.done   ? 'bg-emerald-600 border-emerald-500' :
                     s.active ? 'bg-amber-500/20 border-amber-400 animate-pulse' :
-                                'bg-slate-800 border-slate-700'
+                               'bg-slate-800 border-slate-700'
                   }`}>
                     {s.done
                       ? <CheckCircle2 className="w-4 h-4 text-white" />
@@ -326,30 +420,21 @@ export default function ContributorDashboard() {
                     <div className={`w-0.5 h-8 ${s.done ? 'bg-emerald-700' : 'bg-slate-800'}`} />
                   )}
                 </div>
-                {/* Text */}
                 <div className="pb-6">
-                  <p className={`text-sm font-semibold ${s.done ? 'text-white' : s.active ? 'text-amber-300' : 'text-slate-600'}`}>
-                    {s.label}
-                  </p>
-                  <p className={`text-xs mt-0.5 ${s.done ? 'text-slate-400' : s.active ? 'text-amber-500/70' : 'text-slate-700'}`}>
-                    {s.sub}
-                  </p>
+                  <p className={`text-sm font-semibold ${s.done ? 'text-white' : s.active ? 'text-amber-300' : 'text-slate-600'}`}>{s.label}</p>
+                  <p className={`text-xs mt-0.5 ${s.done ? 'text-slate-400' : s.active ? 'text-amber-500/70' : 'text-slate-700'}`}>{s.sub}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Data yang sudah disubmit */}
+        {/* Data ringkasan */}
         <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-white text-sm uppercase tracking-wide">Data yang Dikirim</h2>
             <button
-              onClick={() => {
-                // Allow re-edit: clear filled state
-                setSubmitDone(false)
-                setUser(prev => prev ? { ...prev, contributor_data: {} } : prev)
-              }}
+              onClick={() => setUser(prev => prev ? { ...prev, contributor_data: {} } : prev)}
               className="text-xs text-slate-500 hover:text-slate-300 flex items-center gap-1 transition-colors"
             >
               <RefreshCw className="w-3 h-3" /> Edit ulang
@@ -359,22 +444,22 @@ export default function ContributorDashboard() {
             {[
               { label: 'Nama Lengkap', value: d.full_name },
               { label: 'NIP/NIDN/NIK', value: d.nip },
-              { label: 'Institusi', value: d.institution },
-              { label: 'No. Telepon', value: d.phone || '—' },
-              { label: 'Alamat', value: d.address || '—' },
+              { label: 'Institusi',    value: d.institution },
+              { label: 'No. Telepon',  value: d.phone || '—' },
+              { label: 'Alamat',       value: d.address || '—' },
             ].map(f => (
               <div key={f.label} className="bg-slate-800/50 rounded-xl px-4 py-3">
                 <p className="text-xs text-slate-500 font-medium mb-1">{f.label}</p>
                 <p className="text-white text-sm">{f.value}</p>
               </div>
             ))}
-            {d.ktp_url && (
+            {d.ktp_path && (
               <div className="bg-slate-800/50 rounded-xl px-4 py-3">
                 <p className="text-xs text-slate-500 font-medium mb-2">Foto KTP</p>
-                <a href={d.ktp_url} target="_blank" rel="noreferrer"
-                  className="text-blue-400 hover:text-blue-300 text-xs underline flex items-center gap-1">
-                  Lihat foto KTP <ArrowRight className="w-3 h-3" />
-                </a>
+                {ktpPreview
+                  ? <a href={ktpPreview} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-xs underline flex items-center gap-1">Lihat foto KTP <ArrowRight className="w-3 h-3" /></a>
+                  : <span className="text-slate-500 text-xs">Memuat preview...</span>
+                }
               </div>
             )}
           </div>
@@ -388,7 +473,6 @@ export default function ContributorDashboard() {
           </div>
         </div>
 
-        {/* Menu terkunci */}
         <div className="space-y-2">
           <p className="text-xs text-slate-600 font-bold uppercase tracking-wide mb-3">Menu (terkunci sampai diverifikasi)</p>
           {[
@@ -402,239 +486,174 @@ export default function ContributorDashboard() {
     )
   }
 
-  // ── REJECTED — bisa submit ulang ────────────────────────────────────────
-
-  const isRejected = user?.contributor_status === 'rejected'
-
-  // ── PENDING tanpa data / REJECTED — tampilkan form verifikasi ────────────
+  // ── FORM VERIFIKASI (pending belum isi data / rejected) ───────────────────
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-8 font-sans">
-
-      {/* Header */}
-      <div className="border-b border-slate-800 pb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              {isRejected
-                ? <><XCircle className="text-red-400" /> Verifikasi Ditolak</>
-                : <><FileText className="text-blue-400" /> Verifikasi Data Pendidik</>
-              }
-            </h1>
-            <p className="text-slate-400 mt-1">
-              {isRejected
-                ? 'Data kamu ditolak. Perbaiki dan kirim ulang.'
-                : 'Lengkapi data berikut untuk mengaktifkan akses kontributor.'
-              }
-            </p>
-          </div>
-          <StatusBadge status={user?.contributor_status ?? null} hasData={hasFilledData} />
-        </div>
-      </div>
-
-      {/* Notif ditolak */}
-      {isRejected && user?.contributor_review_note && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 flex gap-4">
-          <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-red-300 font-bold text-sm mb-1">Alasan Penolakan dari Admin:</p>
-            <p className="text-red-300/80 text-sm leading-relaxed">"{user.contributor_review_note}"</p>
-          </div>
-        </div>
+    <>
+      {showConfirm && (
+        <ConfirmModal
+          type={isRejected ? 'resubmit' : 'submit'}
+          form={form}
+          onConfirm={executeSubmit}
+          onCancel={() => setShowConfirm(false)}
+          loading={submitting}
+        />
       )}
 
-      {/* Success state setelah submit */}
-      {submitDone && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-5 flex gap-4">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-emerald-300 font-bold text-sm mb-1">Data berhasil dikirim!</p>
-            <p className="text-emerald-300/70 text-sm">Admin akan segera mereview data kamu. Pantau status di halaman ini.</p>
+      <div className="max-w-2xl mx-auto space-y-6 pb-8 font-sans">
+        {/* Header */}
+        <div className="border-b border-slate-800 pb-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                {isRejected
+                  ? <><XCircle className="text-red-400" /> Verifikasi Ditolak</>
+                  : <><FileText className="text-blue-400" /> Verifikasi Data Pendidik</>
+                }
+              </h1>
+              <p className="text-slate-400 mt-1">
+                {isRejected
+                  ? 'Data kamu ditolak. Perbaiki dan kirim ulang.'
+                  : 'Lengkapi data berikut untuk mengaktifkan akses kontributor.'
+                }
+              </p>
+            </div>
+            <StatusBadge status={user?.contributor_status ?? null} hasData={hasFilledData} />
           </div>
         </div>
-      )}
 
-      {/* Info steps */}
-      {!submitDone && (
+        {/* Alasan tolak */}
+        {isRejected && user?.contributor_review_note && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 flex gap-4">
+            <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-300 font-bold text-sm mb-1">Alasan Penolakan dari Admin:</p>
+              <p className="text-red-300/80 text-sm leading-relaxed">"{user.contributor_review_note}"</p>
+            </div>
+          </div>
+        )}
+
+        {/* Steps */}
         <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">Langkah Aktivasi Kontributor</p>
-          <div className="flex items-center gap-0 flex-wrap">
+          <div className="flex items-center flex-wrap">
             {[
-              { n: '1', label: 'Isi data', done: false, active: true },
-              { n: '→', label: '', done: false, active: false },
-              { n: '2', label: 'Review admin', done: false, active: false },
-              { n: '→', label: '', done: false, active: false },
-              { n: '3', label: 'Akses penuh', done: false, active: false },
+              { n: '1', label: 'Isi data', active: true },
+              { n: '→', label: '' },
+              { n: '2', label: 'Review admin', active: false },
+              { n: '→', label: '' },
+              { n: '3', label: 'Akses penuh', active: false },
             ].map((s, i) => (
               s.n === '→'
                 ? <ChevronRight key={i} className="w-4 h-4 text-slate-700 mx-1" />
                 : <div key={i} className="flex items-center gap-2">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                      s.active ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'
-                    }`}>{s.n}</div>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${s.active ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'}`}>{s.n}</div>
                     <span className={`text-sm ${s.active ? 'text-white' : 'text-slate-600'}`}>{s.label}</span>
                   </div>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Form verifikasi */}
-      <form onSubmit={handleSubmitVerif} className="space-y-4">
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-5">
-          <h2 className="font-bold text-white flex items-center gap-2">
-            <User className="w-4 h-4 text-blue-400" /> Data Diri
-          </h2>
-
-          {/* Nama lengkap */}
-          <div className="space-y-1.5">
-            <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">
-              Nama Lengkap <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              required placeholder="Sesuai KTP"
-              value={form.full_name}
-              onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
-              className="bg-slate-950 border-slate-700 text-white focus:border-blue-500"
-            />
-          </div>
-
-          {/* NIP */}
-          <div className="space-y-1.5">
-            <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">
-              NIP / NIDN / NIK <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              required placeholder="Nomor Induk Pegawai / NIDN / NIK KTP"
-              value={form.nip}
-              onChange={e => setForm(p => ({ ...p, nip: e.target.value }))}
-              className="bg-slate-950 border-slate-700 text-white focus:border-blue-500"
-            />
-            <p className="text-xs text-slate-600">Isi salah satu: NIP (PNS), NIDN (dosen), atau NIK (KTP)</p>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-5">
-          <h2 className="font-bold text-white flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-blue-400" /> Institusi
-          </h2>
-
-          {/* Institusi */}
-          <div className="space-y-1.5">
-            <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">
-              Nama Institusi / Sekolah <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              required placeholder="Contoh: SMA Negeri 1 Semarang"
-              value={form.institution}
-              onChange={e => setForm(p => ({ ...p, institution: e.target.value }))}
-              className="bg-slate-950 border-slate-700 text-white focus:border-blue-500"
-            />
-          </div>
-
-          {/* Telepon */}
-          <div className="space-y-1.5">
-            <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">No. Telepon / WA</Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-              <Input
-                type="tel" placeholder="08xxxxxxxxxx"
-                value={form.phone}
-                onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                className="bg-slate-950 border-slate-700 text-white focus:border-blue-500 pl-9"
-              />
+        {/* Form */}
+        <form onSubmit={handleClickSubmit} className="space-y-4">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-5">
+            <h2 className="font-bold text-white flex items-center gap-2"><User className="w-4 h-4 text-blue-400" /> Data Diri</h2>
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">Nama Lengkap <span className="text-red-400">*</span></Label>
+              <Input required placeholder="Sesuai KTP" value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="bg-slate-950 border-slate-700 text-white focus:border-blue-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">NIP / NIDN / NIK <span className="text-red-400">*</span></Label>
+              <Input required placeholder="Nomor Induk Pegawai / NIDN / NIK KTP" value={form.nip} onChange={e => setForm(p => ({ ...p, nip: e.target.value }))} className="bg-slate-950 border-slate-700 text-white focus:border-blue-500" />
+              <p className="text-xs text-slate-600">Isi salah satu: NIP (PNS), NIDN (dosen), atau NIK (KTP)</p>
             </div>
           </div>
 
-          {/* Alamat */}
-          <div className="space-y-1.5">
-            <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">Alamat</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-600" />
-              <textarea
-                rows={2} placeholder="Alamat lengkap institusi"
-                value={form.address}
-                onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 pl-9 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-              />
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-5">
+            <h2 className="font-bold text-white flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-400" /> Institusi</h2>
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">Nama Institusi / Sekolah <span className="text-red-400">*</span></Label>
+              <Input required placeholder="Contoh: SMA Negeri 1 Semarang" value={form.institution} onChange={e => setForm(p => ({ ...p, institution: e.target.value }))} className="bg-slate-950 border-slate-700 text-white focus:border-blue-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">No. Telepon / WA</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <Input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="bg-slate-950 border-slate-700 text-white focus:border-blue-500 pl-9" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs uppercase tracking-wide font-bold">Alamat</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-600" />
+                <textarea rows={2} placeholder="Alamat lengkap institusi" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 pl-9 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-none" />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Upload KTP */}
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4">
-          <h2 className="font-bold text-white flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-blue-400" /> Foto KTP <span className="text-red-400 font-normal">*</span>
-          </h2>
-
-          <input
-            ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={e => { if (e.target.files?.[0]) handleKtpUpload(e.target.files[0]) }}
-          />
-
-          {ktpPreview ? (
-            <div className="space-y-3">
-              <div className="relative rounded-xl overflow-hidden border border-slate-700 aspect-video">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={ktpPreview} alt="KTP Preview" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
-                  <span className="text-xs text-white/80 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Foto KTP berhasil diunggah
-                  </span>
+          {/* Upload KTP */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-blue-400" /> Foto KTP <span className="text-red-400 font-normal">*</span>
+            </h2>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleKtpUpload(e.target.files[0]) }} />
+            {ktpPreview ? (
+              <div className="space-y-3">
+                <div className="relative rounded-xl overflow-hidden border border-slate-700 aspect-video">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ktpPreview} alt="KTP Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                    <span className="text-xs text-white/80 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Foto KTP berhasil diunggah
+                    </span>
+                  </div>
                 </div>
+                <button type="button" onClick={() => { setKtpPath(''); setKtpPreview(''); fileRef.current?.click() }} className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" /> Ganti foto
+                </button>
               </div>
-              <button type="button" onClick={() => fileRef.current?.click()}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
-                <RefreshCw className="w-3 h-3" /> Ganti foto
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingKtp}
+                className="w-full border-2 border-dashed border-slate-700 rounded-xl p-8 flex flex-col items-center gap-3 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed group">
+                {uploadingKtp ? <Loader2 className="w-8 h-8 text-blue-400 animate-spin" /> : <Upload className="w-8 h-8 text-slate-600 group-hover:text-blue-400 transition-colors" />}
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-400 group-hover:text-white transition-colors">{uploadingKtp ? 'Mengunggah...' : 'Klik untuk upload foto KTP'}</p>
+                  <p className="text-xs text-slate-600 mt-1">JPG, PNG, WebP · Maks 5MB</p>
+                </div>
               </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingKtp}
-              className="w-full border-2 border-dashed border-slate-700 rounded-xl p-8 flex flex-col items-center gap-3 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed group">
-              {uploadingKtp
-                ? <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-                : <Upload className="w-8 h-8 text-slate-600 group-hover:text-blue-400 transition-colors" />
-              }
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-400 group-hover:text-white transition-colors">
-                  {uploadingKtp ? 'Mengunggah...' : 'Klik untuk upload foto KTP'}
-                </p>
-                <p className="text-xs text-slate-600 mt-1">JPG, PNG, WebP · Maks 5MB</p>
-              </div>
-            </button>
-          )}
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <p className="text-red-300 text-sm">{error}</p>
+            )}
           </div>
-        )}
 
-        {/* Submit */}
-        <Button type="submit" disabled={submitting || uploadingKtp}
-          className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold shadow-lg shadow-blue-900/30">
-          {submitting
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mengirim Data...</>
-            : <>{isRejected ? 'Kirim Ulang Data Verifikasi' : 'Kirim Data untuk Verifikasi'} <ArrowRight className="w-4 h-4 ml-2" /></>
-          }
-        </Button>
-      </form>
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+          )}
 
-      {/* Menu terkunci preview */}
-      <div className="space-y-2 pt-2">
-        <p className="text-xs text-slate-600 font-bold uppercase tracking-wide mb-3">
-          Menu tersedia setelah terverifikasi
-        </p>
-        {[
-          { icon: <BrainCircuit className="w-4 h-4" />, label: 'Bank Soal' },
-          { icon: <BookOpen className="w-4 h-4" />, label: 'Materi' },
-          { icon: <PlusCircle className="w-4 h-4" />, label: 'Tambah Soal' },
-          { icon: <PlusCircle className="w-4 h-4" />, label: 'Tambah Materi' },
-        ].map(m => <LockedMenuCard key={m.label} {...m} />)}
+          <Button type="submit" disabled={uploadingKtp}
+            className={`w-full h-12 font-bold text-white shadow-lg ${
+              isRejected
+                ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-900/30'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-900/30'
+            }`}>
+            {isRejected
+              ? <><RefreshCw className="w-4 h-4 mr-2" /> Kirim Ulang Data Verifikasi</>
+              : <><Send className="w-4 h-4 mr-2" /> Kirim Data untuk Verifikasi</>
+            }
+          </Button>
+        </form>
+
+        <div className="space-y-2 pt-2">
+          <p className="text-xs text-slate-600 font-bold uppercase tracking-wide mb-3">Menu tersedia setelah terverifikasi</p>
+          {[
+            { icon: <BrainCircuit className="w-4 h-4" />, label: 'Bank Soal' },
+            { icon: <BookOpen className="w-4 h-4" />, label: 'Materi' },
+            { icon: <PlusCircle className="w-4 h-4" />, label: 'Tambah Soal' },
+            { icon: <PlusCircle className="w-4 h-4" />, label: 'Tambah Materi' },
+          ].map(m => <LockedMenuCard key={m.label} {...m} />)}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
