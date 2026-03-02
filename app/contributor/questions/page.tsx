@@ -109,6 +109,7 @@ function DeleteModal({ question, onConfirm, onCancel, loading }: {
 function QuestionCard({
   q, index, onDelete, reorderMode,
   onDragStart, onDragOver, onDrop, isDragging, isDragOver,
+  onTouchStart, onTouchMove, onTouchEnd,
 }: {
   q: Question
   index: number
@@ -119,15 +120,23 @@ function QuestionCard({
   onDrop: () => void
   isDragging: boolean
   isDragOver: boolean
+  onTouchStart: (e: React.TouchEvent) => void
+  onTouchMove: (e: React.TouchEvent) => void
+  onTouchEnd: (e: React.TouchEvent) => void
 }) {
   return (
     <div
+      data-drag-index={index}
       draggable={reorderMode}
       onDragStart={reorderMode ? onDragStart : undefined}
       onDragOver={reorderMode ? (e) => { e.preventDefault(); onDragOver(e) } : undefined}
       onDrop={reorderMode ? (e) => { e.preventDefault(); onDrop() } : undefined}
+      onTouchStart={reorderMode ? onTouchStart : undefined}
+      onTouchMove={reorderMode ? onTouchMove : undefined}
+      onTouchEnd={reorderMode ? onTouchEnd : undefined}
       className={`
         flex items-start gap-3 px-4 py-3.5 rounded-xl border transition-all
+        ${reorderMode ? 'touch-none select-none' : ''}
         ${isDragging  ? 'opacity-40 scale-[0.98]' : ''}
         ${isDragOver && !isDragging ? 'border-emerald-500/60 bg-emerald-500/5 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]' : ''}
         ${!isDragging && !isDragOver
@@ -165,13 +174,15 @@ function QuestionCard({
                 {(q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string)?.slice(0, 40) || '—'}
               </span>
             </span>
-            {q.categories?.name && (
-              <span className="text-[11px] text-slate-500 bg-slate-800/80 border border-slate-700/60 px-2 py-0.5 rounded-full">
-                {q.categories.name}
+            <span>
+              {q.categories?.name && (
+                <span className="text-[11px] text-slate-500 bg-slate-800/80 border border-slate-700/60 px-2 py-0.5 rounded-full">
+                  {q.categories.name}
+                </span>
+              )}
+              <span className="text-[11px] text-slate-700 ml-2">
+                {new Date(q.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
               </span>
-            )}
-            <span className="text-[11px] text-slate-700 ml-auto">
-              {new Date(q.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </span>
           </div>
         )}
@@ -210,14 +221,20 @@ function MaterialGroupCard({
   onReorder: (materialId: number | null, newOrder: Question[]) => void
   defaultOpen?: boolean
 }) {
-  const [open, setOpen]             = useState(defaultOpen)
+  const [open, setOpen]               = useState(defaultOpen)
   const [reorderMode, setReorderMode] = useState(false)
   const [localQuestions, setLocalQuestions] = useState<Question[]>(group.questions)
-  const [saving, setSaving]         = useState(false)
-  const [saved, setSaved]           = useState(false)
+  const [saving, setSaving]           = useState(false)
+  const [saved, setSaved]             = useState(false)
 
+  // Desktop drag state
   const dragIndexRef = useRef<number | null>(null)
-  const [dragOver, setDragOver]     = useState<number | null>(null)
+  const [dragOver, setDragOver]       = useState<number | null>(null)
+
+  // Mobile touch state
+  const touchDragIndexRef  = useRef<number | null>(null)
+  const touchLastOverRef   = useRef<number | null>(null)
+  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null)
 
   const isUnlinked = !group.material
 
@@ -225,6 +242,8 @@ function MaterialGroupCard({
   useEffect(() => {
     if (!reorderMode) setLocalQuestions(group.questions)
   }, [group.questions, reorderMode])
+
+  // ── Desktop drag handlers ──────────────────────────────────────────────────
 
   function handleDragStart(index: number) {
     dragIndexRef.current = index
@@ -252,6 +271,58 @@ function MaterialGroupCard({
     setLocalQuestions(reordered)
   }
 
+  // ── Mobile touch handlers ──────────────────────────────────────────────────
+
+  function handleTouchStart(index: number, e: React.TouchEvent) {
+    touchDragIndexRef.current = index
+    touchLastOverRef.current  = index
+    setTouchDragIndex(index)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (touchDragIndexRef.current === null) return
+    // Prevent page scroll while dragging
+    e.preventDefault()
+
+    const touch   = e.touches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    const card    = element?.closest('[data-drag-index]')
+
+    if (card) {
+      const overIndex = parseInt(card.getAttribute('data-drag-index') ?? '-1', 10)
+      if (overIndex !== -1 && overIndex !== touchLastOverRef.current) {
+        touchLastOverRef.current = overIndex
+        setDragOver(overIndex)
+      }
+    }
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dragIndex = touchDragIndexRef.current
+    if (dragIndex === null) return
+
+    const touch   = e.changedTouches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    const card    = element?.closest('[data-drag-index]')
+
+    if (card) {
+      const dropIndex = parseInt(card.getAttribute('data-drag-index') ?? '-1', 10)
+      if (dropIndex !== -1 && dropIndex !== dragIndex) {
+        const reordered = [...localQuestions]
+        const [moved]   = reordered.splice(dragIndex, 1)
+        reordered.splice(dropIndex, 0, moved)
+        setLocalQuestions(reordered)
+      }
+    }
+
+    touchDragIndexRef.current = null
+    touchLastOverRef.current  = null
+    setTouchDragIndex(null)
+    setDragOver(null)
+  }
+
+  // ── Save / cancel ──────────────────────────────────────────────────────────
+
   async function handleSaveOrder() {
     setSaving(true)
     await onReorder(group.material?.id ?? null, localQuestions)
@@ -264,7 +335,9 @@ function MaterialGroupCard({
     setLocalQuestions(group.questions)
     setReorderMode(false)
     setDragOver(null)
-    dragIndexRef.current = null
+    dragIndexRef.current     = null
+    touchDragIndexRef.current = null
+    setTouchDragIndex(null)
   }
 
   const displayQuestions = reorderMode ? localQuestions : group.questions
@@ -298,7 +371,6 @@ function MaterialGroupCard({
 
         {/* Aksi kanan */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Reorder mode: Save / Batal */}
           {reorderMode ? (
             <div className="flex items-center gap-2">
               <button onClick={handleCancelReorder}
@@ -317,7 +389,6 @@ function MaterialGroupCard({
             </div>
           ) : (
             <>
-              {/* Tombol reorder — hanya muncul jika linked dan open */}
               {!isUnlinked && open && displayQuestions.length > 1 && (
                 <button
                   onClick={() => setReorderMode(true)}
@@ -327,7 +398,6 @@ function MaterialGroupCard({
                   <span className="hidden sm:inline">Atur Urutan</span>
                 </button>
               )}
-              {/* Tombol tambah soal */}
               {!isUnlinked && (
                 <Link
                   href={`/contributor/questions/new?material_id=${group.material?.id}`}
@@ -337,7 +407,6 @@ function MaterialGroupCard({
                   <span className="hidden sm:inline">Tambah Soal</span>
                 </Link>
               )}
-              {/* Chevron */}
               <button onClick={() => setOpen(o => !o)}
                 className={`text-slate-500 transition-transform duration-200 p-1 ${open ? '' : '-rotate-90'}`}>
                 <ChevronDown className="w-4 h-4" />
@@ -372,8 +441,14 @@ function MaterialGroupCard({
               onDragStart={() => handleDragStart(i)}
               onDragOver={() => handleDragOver(i)}
               onDrop={() => handleDrop(i)}
-              isDragging={dragIndexRef.current === i}
-              isDragOver={dragOver === i && dragIndexRef.current !== i}
+              isDragging={
+                (dragIndexRef.current === i && dragOver !== null) ||
+                touchDragIndex === i
+              }
+              isDragOver={dragOver === i && (dragIndexRef.current !== i && touchDragIndex !== i)}
+              onTouchStart={(e) => handleTouchStart(i, e)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             />
           ))}
 
@@ -434,14 +509,12 @@ export default function ContributorQuestionsPage() {
     setDeleteTarget(null)
   }
 
-  // Simpan urutan baru ke DB — update order_index per soal
   async function handleReorder(materialId: number | null, newOrder: Question[]) {
     const updates = newOrder.map((q, i) =>
       supabase.from('questions').update({ order_index: i }).eq('id', q.id)
     )
     await Promise.all(updates)
 
-    // Update local state juga
     setQuestions(prev => {
       const orderMap = new Map(newOrder.map((q, i) => [q.id, i]))
       return prev.map(q =>
