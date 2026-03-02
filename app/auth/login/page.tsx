@@ -58,13 +58,22 @@ export default function LoginPage() {
       // Redirect berdasarkan role — tidak peduli mode toggle
       if (user.is_admin) {
         router.push('/admin/stats')
+
       } else if (user.is_contributor) {
         router.push('/contributor')
+
       } else if (user.contributor_status === 'pending') {
-        // Guru yang belum diverifikasi → dashboard biasa + notif
+        // Guru yang belum diverifikasi → dashboard contributor + notif
+        router.push('/contributor?status=pending_contributor')
+
+      } else if (user.contributor_status === 'approved') {
         router.push('/contributor')
+
+      }else if (user.contributor_status === 'rejected') {
+        router.push('/contributor?status=rejected_contributor')
         
-      } else {
+      }
+       else {
         router.push('/dashboard')
       }
 

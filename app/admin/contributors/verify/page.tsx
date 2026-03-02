@@ -88,6 +88,20 @@ function StatusBadge({ status }: { status: Contributor['contributor_status'] }) 
   )
 }
 
+// ─── DataRow — DIPINDAH KE TOP LEVEL (fix: cannot create components during render) ──
+
+function DataRow({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 shrink-0 mt-0.5">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[11px] text-slate-500 uppercase tracking-wide font-bold">{label}</p>
+        <p className="text-sm text-white mt-0.5 break-words">{value || <span className="text-slate-600 italic">Tidak diisi</span>}</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Reject Modal ─────────────────────────────────────────────────────────────
 
 function RejectModal({ targets, onConfirm, onCancel, loading }: {
@@ -255,16 +269,6 @@ function ContributorDrawer({ c, onClose, onApprove, onReject, onRevoke, actionLo
   onLoadKtp: (path: string) => void
 }) {
   const d = c.contributor_data || {}
-
-  const DataRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string }) => (
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 shrink-0 mt-0.5">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-[11px] text-slate-500 uppercase tracking-wide font-bold">{label}</p>
-        <p className="text-sm text-white mt-0.5 break-words">{value || <span className="text-slate-600 italic">Tidak diisi</span>}</p>
-      </div>
-    </div>
-  )
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">

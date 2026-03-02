@@ -71,24 +71,14 @@ export default function ContributorLayout({ children }: { children: React.ReactN
       exact: true,
     },
     {
-      title: 'Bank Soal',
+      title: 'Kelola Soal',
       href: '/contributor/questions',
       icon: <BrainCircuit className="w-5 h-5" />,
     },
     {
-      title: 'Tambah Soal',
-      href: '/contributor/questions/new',
-      icon: <PlusCircle className="w-5 h-5" />,
-    },
-    {
-      title: 'Materi',
+      title: 'Kelola Materi',
       href: '/contributor/materials',
       icon: <BookOpen className="w-5 h-5" />,
-    },
-    {
-      title: 'Tambah Materi',
-      href: '/contributor/materials/new',
-      icon: <PlusCircle className="w-5 h-5" />,
     },
   ]
 
@@ -124,7 +114,7 @@ export default function ContributorLayout({ children }: { children: React.ReactN
         {/* Tombol switch ke Admin (hanya admin) */}
         {isAdmin && (
           <div className="px-3 pt-3">
-            <Link href="/admin">
+            <Link href="/admin/stats">
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600/20 transition-colors cursor-pointer">
                 <span className="text-xs font-bold">Buka Admin Panel</span>
                 <ChevronRight className="w-4 h-4" />

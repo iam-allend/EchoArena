@@ -31,6 +31,7 @@ export default function EditQuestionPage() {
   const [fetching, setFetching]   = useState(true)
   const [saving, setSaving]       = useState(false)
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
+  const [materials, setMaterials]   = useState<{ id: number; title: string; thumbnail: string | null }[]>([])
 
   const [form, setForm] = useState({
     question_text: '',
@@ -38,16 +39,19 @@ export default function EditQuestionPage() {
     correct_answer: 'A' as 'A' | 'B' | 'C' | 'D',
     difficulty: 'medium',
     category_id: '',
+    material_id: '',
   })
 
   useEffect(() => {
     async function load() {
-      const [{ data: cats }, { data: q, error }] = await Promise.all([
+      const [{ data: cats }, { data: mats }, { data: q, error }] = await Promise.all([
         supabase.from('categories').select('id, name'),
+        supabase.from('materials').select('id, title, thumbnail').order('title'),
         supabase.from('questions').select('*').eq('id', id).single(),
       ])
 
       if (cats) setCategories(cats)
+      if (mats) setMaterials(mats as any)
 
       if (error || !q) {
         alert('Soal tidak ditemukan.')
@@ -64,6 +68,7 @@ export default function EditQuestionPage() {
         correct_answer: q.correct_answer || 'A',
         difficulty: q.difficulty || 'medium',
         category_id: q.category_id ? String(q.category_id) : '',
+        material_id: q.material_id ? String(q.material_id) : '',
       })
       setFetching(false)
     }
@@ -86,6 +91,7 @@ export default function EditQuestionPage() {
       const { error } = await supabase.from('questions').update({
         ...form,
         category_id: form.category_id ? parseInt(form.category_id) : null,
+        material_id: form.material_id ? parseInt(form.material_id) : null,
       }).eq('id', id)
 
       if (error) throw error
@@ -225,6 +231,21 @@ export default function EditQuestionPage() {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Materi Terkait */}
+        <div className="space-y-2">
+          <Label className="text-slate-500 text-xs uppercase tracking-wide">Materi Terkait</Label>
+          <select
+            value={form.material_id}
+            onChange={e => set('material_id', e.target.value)}
+            className="w-full h-10 bg-slate-950 border border-slate-700 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">— Tanpa Materi —</option>
+            {materials.map(m => (
+              <option key={m.id} value={m.id}>{m.thumbnail} {m.title}</option>
+            ))}
+          </select>
         </div>
 
         {/* Actions */}

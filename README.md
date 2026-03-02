@@ -41,7 +41,8 @@ cp .env.example .env.local
 Edit `.env.local` with your credentials:
 
 - Supabase URL & Keys
-- Daily.co API Key
+- Agora SDK API Key
+- Resend for SMTP
 
 4. Run development server:
 

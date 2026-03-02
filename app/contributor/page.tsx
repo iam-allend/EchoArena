@@ -528,7 +528,7 @@ export default function ContributorDashboard() {
             <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-red-300 font-bold text-sm mb-1">Alasan Penolakan dari Admin:</p>
-              <p className="text-red-300/80 text-sm leading-relaxed">"{user.contributor_review_note}"</p>
+              <p className="text-red-300/80 text-sm leading-relaxed">{user.contributor_review_note}</p>
             </div>
           </div>
         )}
