@@ -239,7 +239,7 @@ export default function MaterialsPage() {
       <div className="relative min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950 pt-10">
         <Particles />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pb-20">
 
           {/* ── Hero ── */}
           <div className="text-center py-14 sm:py-20 space-y-5">
@@ -319,7 +319,7 @@ export default function MaterialsPage() {
             </div>
 
             {/* Level pills */}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
               {LEVELS.map(l => (
                 <button key={l.value} onClick={() => setLevel(l.value)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
