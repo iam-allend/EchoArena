@@ -338,7 +338,7 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">Cara Bermain, Mudah Banget! 🎉</h2>
               <p className="text-slate-500 text-sm">Tiga langkah, langsung bisa bertarung di arena.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-3">
               {[
                 {n:'01',e:'📚',t:'Pilih Materi',       d:'Cari pelajaran yang kamu mau, pilih level kesulitan yang sesuai.',     g:'from-purple-500 to-violet-600'},
                 {n:'02',e:'🎤',t:'Jawab Pakai Suara',  d:'Ucapkan jawabanmu — EchoArena memahami suaramu secara real-time.',    g:'from-pink-500 to-rose-600'},
@@ -358,7 +358,7 @@ export default function Home() {
 
         {/* ════ FEATURES ════ */}
         <section className="relative z-10 px-4 sm:px-6 lg:px-8 py-10">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-5xl mx-auto px-2 sm:px-0">
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 bg-pink-500/10 border border-pink-400/20 rounded-full px-4 py-1.5 text-pink-300 text-xs font-bold uppercase tracking-widest mb-4">
                 <Flame className="w-3.5 h-3.5" />Kenapa EchoArena?
@@ -428,7 +428,7 @@ export default function Home() {
 
         {/* ════ TEAM ════ */}
         <section className="relative z-10 px-4 sm:px-6 lg:px-8 py-12 pb-24">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto px-2 sm:px-0">
             <div className="text-center mb-10">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl mb-4 shadow-xl">
                 <Code className="w-6 h-6 text-white" />
