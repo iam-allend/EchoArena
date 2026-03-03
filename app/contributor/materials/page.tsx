@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
-  BookOpen, Plus, Search, Loader2, Pencil, Trash2, Clock,
+  BookOpen, Plus, Search, Loader2, Pencil, Trash2, Clock, HelpCircle, BetweenVerticalEnd,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ interface Material {
   duration: string | null
   thumbnail: string | null
   topics_count: number
+  questions_count: number          // jumlah soal yang tertaut (milik kontributor ini)
   created_at: string
 }
 
@@ -35,7 +36,26 @@ const LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }>
 function LevelBadge({ level }: { level: string }) {
   const c = LEVEL_CONFIG[level] ?? { label: level, color: 'text-slate-400', bg: 'bg-slate-700 border-slate-600' }
   return (
-    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${c.bg} ${c.color}`}>{c.label}</span>
+    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${c.bg} ${c.color}`}>
+      {c.label}
+    </span>
+  )
+}
+
+// Subject badge
+function SubjectBadge({ subject }: { subject: string }) {
+  const subjectMap: Record<string, { label: string; color: string }> = {
+    matematika: { label: 'Matematika', color: 'text-indigo-400' },
+    ipa:        { label: 'IPA',        color: 'text-emerald-400' },
+    ips:        { label: 'IPS',        color: 'text-amber-400' },
+    bahasa:     { label: 'Bahasa',     color: 'text-rose-400' },
+    umum:       { label: 'Umum',       color: 'text-slate-400' },
+  }
+  const config = subjectMap[subject.toLowerCase()] ?? { label: subject, color: 'text-slate-400' }
+  return (
+    <span className={`text-xs font-medium capitalize ${config.color}`}>
+      {config.label}
+    </span>
   )
 }
 
@@ -87,15 +107,48 @@ export default function ContributorMaterialsPage() {
   const fetchMaterials = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
-    const { data } = await supabase
+    // 1. Ambil semua materi milik user
+    const { data: materialsData, error: materialsError } = await supabase
       .from('materials')
       .select('id, title, description, subject, level, duration, thumbnail, topics_count, created_at')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
 
-    if (data) setMaterials(data as Material[])
+    if (materialsError || !materialsData) {
+      setLoading(false)
+      return
+    }
+
+    // 2. Ambil semua soal milik user yang memiliki material_id (tidak null)
+    const { data: questionsData } = await supabase
+      .from('questions')
+      .select('material_id')
+      .eq('created_by', user.id)
+      .not('material_id', 'is', null)
+
+    // 3. Hitung jumlah soal per material_id
+    const countMap = new Map<number, number>()
+    if (questionsData) {
+      questionsData.forEach(q => {
+        const mid = q.material_id
+        if (mid) {
+          countMap.set(mid, (countMap.get(mid) || 0) + 1)
+        }
+      })
+    }
+
+    // 4. Gabungkan data
+    const enrichedMaterials: Material[] = materialsData.map(m => ({
+      ...m,
+      questions_count: countMap.get(m.id) ?? 0,
+    }))
+
+    setMaterials(enrichedMaterials)
     setLoading(false)
   }, [])
 
@@ -105,17 +158,23 @@ export default function ContributorMaterialsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     const { error } = await supabase.from('materials').delete().eq('id', deleteTarget.id)
-    if (!error) setMaterials(prev => prev.filter(m => m.id !== deleteTarget.id))
+    if (!error) {
+      setMaterials(prev => prev.filter(m => m.id !== deleteTarget.id))
+    }
     setDeleting(false)
     setDeleteTarget(null)
   }
 
   const filtered = materials.filter(m => {
     const matchSearch = m.title.toLowerCase().includes(search.toLowerCase()) ||
-      (m.description || '').toLowerCase().includes(search.toLowerCase())
+      (m.description || '').toLowerCase().includes(search.toLowerCase()) ||
+      m.subject.toLowerCase().includes(search.toLowerCase())
     const matchLevel = filterLevel === 'all' || m.level === filterLevel
     return matchSearch && matchLevel
   })
+
+  // Statistik ringkas (pastikan angka)
+  const totalQuestions = materials.reduce((sum, m) => sum + (m.questions_count || 0), 0)
 
   return (
     <>
@@ -145,10 +204,11 @@ export default function ContributorMaterialsPage() {
           </Link>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Statistik */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
             { label: 'Total Materi', value: materials.length, color: 'text-white', bg: 'bg-slate-800/60 border-slate-700' },
+            { label: 'Total Soal', value: totalQuestions, color: 'text-indigo-400', bg: 'bg-indigo-500/5 border-indigo-500/20' },
             ...['sd', 'smp', 'sma'].map(l => ({
               label: LEVEL_CONFIG[l]?.label,
               value: materials.filter(m => m.level === l).length,
@@ -163,12 +223,12 @@ export default function ContributorMaterialsPage() {
           ))}
         </div>
 
-        {/* Filter */}
+        {/* Filter & Pencarian */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
-              placeholder="Cari materi..."
+              placeholder="Cari materi, deskripsi, atau mata pelajaran..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="bg-slate-900 border-slate-700 text-white pl-9 focus:border-blue-500"
@@ -189,7 +249,7 @@ export default function ContributorMaterialsPage() {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Daftar Materi */}
         {loading ? (
           <div className="flex items-center justify-center py-16 text-slate-500 gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
@@ -211,36 +271,51 @@ export default function ContributorMaterialsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-slate-600 font-bold uppercase tracking-wide">{filtered.length} materi</p>
+            <p className="text-xs text-slate-600 font-bold uppercase tracking-wide">
+              {filtered.length} materi • {filtered.reduce((sum, m) => sum + (m.questions_count || 0), 0)} soal
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filtered.map(m => (
                 <div key={m.id}
                   className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex gap-4 transition-colors group">
 
                   {/* Thumbnail */}
-                  <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shrink-0">
                     {m.thumbnail || '📚'}
                   </div>
 
-                  {/* Content */}
+                  {/* Konten */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm mb-1 truncate">{m.title}</p>
-                    {m.description && (
-                      <p className="text-slate-500 text-xs line-clamp-2 mb-2">{m.description}</p>
-                    )}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white font-semibold text-base mb-1 truncate">{m.title}</p>
+
+                    {/* Baris informasi: level + subject + durasi + jumlah soal */}
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
                       <LevelBadge level={m.level} />
-                      <span className="text-xs text-slate-500 capitalize">{m.subject}</span>
+                      <SubjectBadge subject={m.subject} />
                       {m.duration && (
-                        <span className="text-xs text-slate-600 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />{m.duration}
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {m.duration}
                         </span>
                       )}
-                      <span className="text-xs text-slate-600">{m.topics_count} bagian</span>
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <HelpCircle className="w-3 h-3" /> {m.questions_count} soal
+                      </span>
+
+                      {/* Jumlah topik (optional) */}
+                      {m.topics_count > 0 && (
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <BetweenVerticalEnd className="w-3 h-3" /> {m.topics_count} bagian
+                      </span>
+                      )}
                     </div>
+
+                    {/* Deskripsi singkat */}
+                    {m.description && (
+                      <p className="text-slate-400 text-xs line-clamp-2">{m.description}</p>
+                    )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Aksi (hover) */}
                   <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link href={`/contributor/materials/${m.id}`}>
                       <button className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Edit">

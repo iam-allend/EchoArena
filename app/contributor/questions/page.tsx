@@ -170,8 +170,8 @@ function QuestionCard({
             <span className="text-xs text-slate-600 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-green-500/80" />
               <span className="text-green-400/80 font-bold">{q.correct_answer}.</span>
-              <span className="text-slate-400 truncate max-w-[140px]">
-                {(q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string)?.slice(0, 40) || '—'}
+              <span className="text-slate-400 truncate max-w-[80px]">
+                {(q[`option_${q.correct_answer.toLowerCase()}` as keyof Question] as string)?.slice(0, 20) || '—'}
               </span>
             </span>
             <span>
@@ -674,7 +674,7 @@ export default function ContributorQuestionsPage() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <Layers className="w-3.5 h-3.5" />
-                <span>{groups.length} kelompok</span>
+                <span>{groups.length} kelompok materi</span>
                 <span className="text-slate-700">·</span>
                 <span>{filtered.length} soal</span>
               </div>

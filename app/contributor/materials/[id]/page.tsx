@@ -30,7 +30,7 @@ const LEVELS = [
 
 const EMOJIS = ['📚', '📐', '🔬', '🏛️', '📖', '🧮', '🌍', '🎨', '💡', '🔭']
 
-// ─── Section Card (reuse sama dengan /new) ────────────────────────────────────
+// ─── Section Card ─────────────────────────────────────────────────────────────
 
 function SectionCard({
   section, index, total, onChange, onRemove, onAddExample, onUpdateExample, onRemoveExample,
@@ -104,6 +104,7 @@ export default function ContributorEditMaterialPage() {
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [notOwner, setNotOwner] = useState(false)
+  const [ownerId, setOwnerId]   = useState<string | null>(null) // ← tambahkan state ownerId
 
   const [form, setForm] = useState({
     title: '', description: '', subject: '', level: '', duration: '', thumbnail: '📚',
@@ -133,6 +134,9 @@ export default function ContributorEditMaterialPage() {
         setFetching(false)
         return
       }
+
+      // Simpan ownerId
+      setOwnerId(m.created_by)
 
       setForm({
         title:       m.title       || '',
@@ -176,25 +180,71 @@ export default function ContributorEditMaterialPage() {
     if (!form.level)   { alert('Pilih Tingkat.'); return }
 
     setSaving(true)
-    const { error } = await supabase
-      .from('materials')
-      .update({
-        title:        form.title,
-        description:  form.description,
-        subject:      form.subject,
-        level:        form.level,
-        duration:     form.duration || null,
-        thumbnail:    form.thumbnail || '📚',
-        content:      sections,
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/auth/login'); return }
+
+      // Cek kepemilikan (lapisan kedua)
+      if (ownerId && ownerId !== user.id) {
+        alert('Anda bukan pemilik materi ini.')
+        setSaving(false)
+        return
+      }
+
+      console.log('User ID:', user.id)
+      console.log('Owner ID dari database:', ownerId)
+      console.log('Data yang dikirim:', {
+        title: form.title,
+        description: form.description,
+        subject: form.subject,
+        level: form.level,
+        duration: form.duration,
+        thumbnail: form.thumbnail,
+        sections: sections,
         topics_count: sections.length,
       })
-      .eq('id', id)
 
-    setSaving(false)
-    if (error) { alert('Gagal menyimpan: ' + error.message); return }
+      const { error, data } = await supabase
+        .from('materials')
+        .update({
+          title:        form.title,
+          description:  form.description,
+          subject:      form.subject,
+          level:        form.level,
+          duration:     form.duration || null,
+          thumbnail:    form.thumbnail || '📚',
+          content:      sections,
+          topics_count: sections.length,
+        })
+        .eq('id', id)
+        .select()
 
-    setSaved(true)
-    setTimeout(() => { router.push('/contributor/materials'); router.refresh() }, 1000)
+      if (error) {
+        console.error('Supabase error:', error)
+        alert(`Gagal menyimpan: ${error.message}${error.details ? '\n' + error.details : ''}`)
+        return
+      }
+
+      console.log('Data setelah update:', data)
+
+      if (!data || data.length === 0) {
+        console.warn('Tidak ada data yang dikembalikan. Periksa RLS dan kepemilikan.')
+        alert('Gagal menyimpan: Tidak ada perubahan yang tersimpan. Pastikan Anda adalah pemilik materi ini dan policy RLS sudah benar.')
+        return
+      }
+
+      setSaved(true)
+      setTimeout(() => {
+        router.push('/contributor/materials')
+        router.refresh()
+      }, 1000)
+
+    } catch (err: any) {
+      console.error('Unexpected error:', err)
+      alert('Terjadi kesalahan: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── States ───────────────────────────────────────────────────────────────

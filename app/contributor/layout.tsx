@@ -132,7 +132,7 @@ export default function ContributorLayout({ children }: { children: React.ReactN
             if (locked) {
               return (
                 <div key={item.href}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl opacity-40 cursor-not-allowed select-none text-slate-600">
+                  className="mb-1 flex items-center gap-3 px-3 py-3 rounded-xl opacity-40 cursor-not-allowed select-none text-slate-600">
                   {item.icon}
                   <span className="text-sm">{item.title}</span>
                   <Lock className="w-3.5 h-3.5 ml-auto text-slate-700" />
@@ -142,7 +142,7 @@ export default function ContributorLayout({ children }: { children: React.ReactN
             return (
               <Link key={item.href} href={item.href}>
                 <div className={`
-                  flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 relative
+                  mb-1 flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 relative
                   ${active
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30 font-medium'
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
@@ -217,7 +217,7 @@ export default function ContributorLayout({ children }: { children: React.ReactN
               <nav className="p-4 space-y-2 overflow-y-auto flex-1">
                 {menuItems.map((item) => (
                   <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className={`p-4 rounded-xl flex items-center gap-4 ${isActive(item) ? 'bg-emerald-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-300'}`}>
+                    <div className={`mb-1 p-4 rounded-xl flex items-center gap-4 ${isActive(item) ? 'bg-emerald-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-300'}`}>
                       {item.icon}
                       <span className="font-medium">{item.title}</span>
                     </div>
