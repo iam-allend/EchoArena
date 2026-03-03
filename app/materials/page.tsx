@@ -242,7 +242,7 @@ export default function MaterialsPage() {
         <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pb-20">
 
           {/* ── Hero ── */}
-          <div className="text-center py-14 sm:py-20 space-y-5">
+          <div className="text-center pt-14 pb-8 sm:py-20 space-y-5">
             <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-400/25 rounded-full px-4 py-1.5 text-xs font-bold text-purple-300 uppercase tracking-widest">
               <BookOpen className="w-3.5 h-3.5" /> Perpustakaan Materi
             </div>
