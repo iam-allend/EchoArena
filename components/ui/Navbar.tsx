@@ -77,13 +77,11 @@ export default function Navbar() {
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'U'
 
-  // Hanya Beranda & Materi yang tampil di nav utama
   const mainLinks = [
     { href: '/',          label: 'Beranda', icon: Home     },
     { href: '/materials', label: 'Materi',  icon: BookOpen },
   ]
 
-  // Dashboard / Kontributor / Admin hanya di dropdown avatar
   const dropdownLinks = [
     { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard, show: !!user },
     { href: '/contributor', label: 'Kontributor', icon: Sparkles,        show: !!user?.is_contributor },
@@ -94,6 +92,9 @@ export default function Navbar() {
     if (href === '/') return pathname === '/'
     return pathname === href || pathname.startsWith(href + '/')
   }
+
+  // Cek apakah pathname saat ini ada di salah satu dropdown link
+  const isDropdownPageActive = dropdownLinks.some(l => isActive(l.href))
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-4">
@@ -113,7 +114,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Nav links — desktop (Beranda & Materi saja) */}
+        {/* Nav links — desktop */}
         <div className="hidden md:flex items-center gap-1">
           {mainLinks.map(item => (
             <Link key={item.href} href={item.href}
@@ -138,21 +139,32 @@ export default function Navbar() {
               <div className="relative profile-dropdown">
                 <button
                   onClick={() => setProfileOpen(o => !o)}
-                  className="hidden sm:flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 rounded-xl px-3 py-1.5 hover:bg-slate-800 transition-colors"
+                  className={`hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors border ${
+                    isDropdownPageActive
+                      ? 'bg-purple-600/20 border-purple-500/40 hover:bg-purple-600/25'
+                      : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-800'
+                  }`}
                 >
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-black text-white">
                     {initials}
                   </div>
-                  <span className="text-xs text-slate-300 max-w-[100px] truncate">{user.email}</span>
+                  <span className={`text-xs max-w-[100px] truncate ${isDropdownPageActive ? 'text-purple-300' : 'text-slate-300'}`}>
+                    {user.email}
+                  </span>
                 </button>
 
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-52 bg-[#0d0d1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-2 space-y-1">
                     {dropdownLinks.map(item => (
                       <Link key={item.href} href={item.href} onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-300 hover:bg-white/5 transition-colors">
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
+                          isActive(item.href)
+                            ? 'bg-purple-600/20 text-purple-300 border border-purple-500/20'
+                            : 'text-slate-300 hover:bg-white/5'
+                        }`}>
                         <item.icon className="w-4 h-4" />
                         {item.label}
+                        {isActive(item.href) && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-400" />}
                       </Link>
                     ))}
                     <div className="h-px bg-white/5 my-1" />
@@ -197,7 +209,6 @@ export default function Navbar() {
       {menuOpen && (
         <div className="absolute top-full mt-2 left-4 right-4 bg-[#0d0d1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden md:hidden">
           <div className="p-3 space-y-1">
-            {/* Main links */}
             {mainLinks.map(item => (
               <Link key={item.href} href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
@@ -211,7 +222,6 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* Dropdown links (dashboard, kontributor, admin) jika login */}
             {dropdownLinks.length > 0 && (
               <>
                 <div className="h-px bg-white/5 my-1" />
@@ -224,13 +234,15 @@ export default function Navbar() {
                     }`}>
                     <item.icon className="w-4 h-4" />
                     {item.label}
-                    <ChevronRight className="w-4 h-4 ml-auto opacity-40" />
+                    {isActive(item.href)
+                      ? <span className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-400" />
+                      : <ChevronRight className="w-4 h-4 ml-auto opacity-40" />
+                    }
                   </Link>
                 ))}
               </>
             )}
 
-            {/* Auth buttons */}
             {!user ? (
               <div className="pt-2 border-t border-white/5 flex gap-2 mt-2">
                 <Link href="/auth/login"
