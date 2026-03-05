@@ -80,6 +80,8 @@ export default function Navbar() {
   const mainLinks = [
     { href: '/',          label: 'Beranda', icon: Home     },
     { href: '/materials', label: 'Materi',  icon: BookOpen },
+    { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+
   ]
 
   const dropdownLinks = [

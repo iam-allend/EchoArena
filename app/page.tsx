@@ -261,8 +261,8 @@ export default function Home() {
           </div>
 
           {!isLoggedIn && (
-            <p className="su4 mt-4 flex items-center gap-1.5 text-slate-600 text-xs font-medium">
-              <Shield className="w-3.5 h-3.5 text-purple-500/50 shrink-0" />
+            <p className="su4 mt-4 flex items-center gap-1.5 text-white/50 text-xs font-medium">
+              <Shield className="w-3.5 h-3.5 text-white/50 shrink-0" />
               Akun tamu berlaku 7 hari · Daftar untuk simpan progres selamanya
             </p>
           )}
