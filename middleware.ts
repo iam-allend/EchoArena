@@ -31,14 +31,22 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { data: { session } } = await supabase.auth.getSession()
 
+  // Guest pakai cookie karena tidak punya Supabase session
+  const isGuest = request.cookies.get('guest_session')?.value === '1'
+
   // ── 1. Rute butuh login ────────────────────────────────────────────────────
   const protectedRoutes = ['/dashboard', '/room', '/profile', '/admin', '/contributor']
   const isProtected = protectedRoutes.some(r => pathname.startsWith(r))
 
-  if (isProtected && !session) {
+  if (isProtected && !session && !isGuest) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Guest tidak boleh akses admin / contributor
+  if (isGuest && !session && (pathname.startsWith('/admin') || pathname.startsWith('/contributor'))) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   // ── 2. /admin → hanya is_admin ────────────────────────────────────────────
@@ -85,7 +93,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── 4. Sudah login, buka /auth/* → redirect ───────────────────────────────
-  if (session && (pathname === '/auth/login' || pathname === '/auth/register')) {
+  if ((session || isGuest) && (pathname === '/auth/login' || pathname === '/auth/register')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

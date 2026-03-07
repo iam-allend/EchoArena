@@ -133,15 +133,13 @@ export function useAuth() {
   async function logout() {
     if (isGuest) {
       clearGuestAccount()
-      setUser(null)
-      setIsGuest(false)
-      setExpiresAt(null)
-    } else {
-      await supabase.auth.signOut()
       localStorage.removeItem('auth_mode')
-      setUser(null)
-      setIsGuest(false)
+    } else {
+      await supabase.auth.signOut({ scope: 'local' }) // fix 403
+      localStorage.removeItem('auth_mode')
     }
+    // Hard redirect — bukan setState — agar session benar-benar ter-clear
+    window.location.href = '/'
   }
 
   // ✅ FIX 3: Simplify useEffect - run ONCE on mount

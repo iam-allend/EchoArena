@@ -40,6 +40,7 @@ export default function Home() {
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [stats, setStats]               = useState<Stats>({ materials: 0, questions: 0, categories: 0, players: 0 })
+  const [showGuestModal, setShowGuestModal] = useState(false)
 
   useEffect(() => {
     async function checkAuth() {
@@ -74,10 +75,20 @@ export default function Home() {
   async function handleGuest() {
     setLoading(true)
     try {
-      if (getGuestAccountFromStorage()) { router.push('/dashboard'); return }
-      await createGuestAccount(); router.push('/dashboard')
-    } catch { alert('Gagal membuat akun tamu. Silakan coba lagi.') }
-    finally { setLoading(false) }
+      if (getGuestAccountFromStorage()) {
+        // Pastikan cookie ada
+        document.cookie = 'guest_session=1; path=/; max-age=604800' // 7 hari
+        window.location.href = '/dashboard'
+        return
+      }
+      await createGuestAccount()
+      // Set cookie setelah guest account dibuat
+      document.cookie = 'guest_session=1; path=/; max-age=604800'
+      window.location.href = '/dashboard'
+    } catch {
+      alert('Gagal membuat akun tamu. Silakan coba lagi.')
+      setLoading(false)
+    }
   }
 
   if (checkingAuth) return (
@@ -136,6 +147,73 @@ export default function Home() {
         .btn-shim:hover::after { opacity:1; animation: sm 1.4s ease infinite; }
       `}</style>
 
+      {/* Guest Confirmation Modal */}
+      {showGuestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(8px)' }}>
+          <div className="w-full max-w-sm rounded-3xl overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1030 100%)',
+              border: '1px solid rgba(139,92,246,.35)',
+              boxShadow: '0 0 60px rgba(139,92,246,.2), 0 25px 50px rgba(0,0,0,.6)',
+            }}>
+            <div className="h-1" style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7, #ec4899)' }} />
+            <div className="p-7 text-center space-y-4">
+              <div className="text-4xl">🎮</div>
+              <div>
+                <h3 className="text-xl font-black text-white mb-2">Main sebagai Tamu?</h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'rgba(200,180,255,.55)' }}>
+                  Akun tamu berlaku <strong style={{ color: '#fbbf24' }}>7 hari</strong> dan akan
+                  dihapus otomatis. Progres, koin, dan riwayat game{' '}
+                  <strong style={{ color: '#f87171' }}>tidak bisa dipulihkan</strong> setelah expired.
+                </p>
+              </div>
+
+              {/* Terms list */}
+              <div className="rounded-2xl p-4 text-left space-y-2"
+                style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)' }}>
+                {[
+                  { icon: '✅', text: 'Akses semua materi & quiz gratis' },
+                  { icon: '✅', text: 'Main multiplayer langsung' },
+                  { icon: '⚠️', text: 'Data hilang setelah 7 hari' },
+                  { icon: '⚠️', text: 'Tidak bisa ganti username/password' },
+                  { icon: '💡', text: 'Bisa upgrade ke akun permanen kapan saja' },
+                ].map((item, i) => (
+                  <p key={i} className="text-xs flex items-center gap-2"
+                    style={{ color: 'rgba(200,180,255,.6)' }}>
+                    <span>{item.icon}</span> {item.text}
+                  </p>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowGuestModal(false)}
+                  className="flex-1 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'rgba(255,255,255,.05)',
+                    border: '1px solid rgba(255,255,255,.1)',
+                    color: 'rgba(200,180,255,.5)',
+                  }}>
+                  Batal
+                </button>
+                <button
+                  onClick={() => { setShowGuestModal(false); handleGuest() }}
+                  disabled={loading}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-60"
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                    boxShadow: '0 4px 20px rgba(124,58,237,.5)',
+                  }}>
+                  {loading ? '...' : 'Ya, Main Sekarang'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <main className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
 
         {/* Ambient + grid */}
@@ -193,7 +271,7 @@ export default function Home() {
               <div className="flex flex-col gap-3">
 
                 {/* PRIMARY */}
-                <button onClick={handleGuest} disabled={loading}
+                <button onClick={() => setShowGuestModal(true)} disabled={loading}
                   className="btn-shim group relative w-full flex items-center gap-3 p-1.5 pr-2 rounded-2xl overflow-hidden
                     disabled:opacity-60 disabled:cursor-not-allowed
                     hover:scale-[1.015] active:scale-[.99] transition-transform duration-150

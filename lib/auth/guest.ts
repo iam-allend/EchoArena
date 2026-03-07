@@ -33,7 +33,7 @@ export async function createGuestAccount() {
     .from('users')
     .insert({
       username,
-      email: `${username.toLowerCase()}@guest.echoarena.local`, // Dummy email
+      email: `${username.toLowerCase()}@guest.echoarena.local`,
       is_guest: true,
       guest_expires_at: expiresAt.toISOString(),
       last_active: new Date().toISOString(),
@@ -43,7 +43,7 @@ export async function createGuestAccount() {
 
   if (error) throw error
 
-  // Store guest info in localStorage
+  // Simpan ke localStorage
   const guestInfo = {
     id: data.id,
     username: data.username,
@@ -53,6 +53,9 @@ export async function createGuestAccount() {
 
   localStorage.setItem('guest_account', JSON.stringify(guestInfo))
   localStorage.setItem('auth_mode', 'guest')
+
+  // ✅ Set cookie agar middleware bisa mengenali guest session
+  document.cookie = `guest_session=1; path=/; max-age=${60 * 60 * 24 * GUEST_EXPIRY_DAYS}; SameSite=Lax`
 
   return data
 }
@@ -68,7 +71,6 @@ export function getGuestAccountFromStorage(): GuestAccount | null {
     const parsed = JSON.parse(stored)
     const expiresAt = new Date(parsed.expiresAt)
 
-    // Check if expired
     if (expiresAt < new Date()) {
       clearGuestAccount()
       return null
@@ -95,12 +97,15 @@ export async function updateGuestActivity(userId: string) {
     .eq('id', userId)
 }
 
-// Clear guest account
+// Clear guest account + cookie
 export function clearGuestAccount() {
   if (typeof window === 'undefined') return
 
   localStorage.removeItem('guest_account')
   localStorage.removeItem('auth_mode')
+
+  // ✅ Hapus cookie guest juga agar middleware tidak loloskan lagi
+  document.cookie = 'guest_session=; path=/; max-age=0; SameSite=Lax'
 }
 
 // Check if guest is expired

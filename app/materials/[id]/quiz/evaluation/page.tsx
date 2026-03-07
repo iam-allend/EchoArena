@@ -201,7 +201,7 @@ export default function QuizEvaluationPage() {
     : { icon: '💪', label: 'Jangan Menyerah', color: '#f87171' }
 
   return (
-    <div className="min-h-screen" style={{ background: BG }}>
+    <div className="min-h-screen pt-15" style={{ background: BG }}>
       <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: GRID }} />
 
       <div className="relative max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-5">
