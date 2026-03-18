@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
-import { getGuestDaysRemaining } from '@/lib/auth/guest'
+import { getGuestDaysRemaining, clearGuestAccount } from '@/lib/auth/guest'
 import { MusicControl } from '@/components/ui/MusicControl'
+
 import {
   Loader2, AlertTriangle, Crown, LogOut, Play, Clock, CheckCircle,
   Trophy, Star, Zap, Target, BookOpen, Plus, ArrowRight, Flame,
@@ -360,15 +361,13 @@ export default function Dashboard() {
   }
 
   async function handleLogout() {
-    try {
-      await supabase.auth.signOut()
-      // Hard redirect — bukan router.push — agar session di-clear sempurna
-      window.location.href = '/'
-    } catch (err) {
-      console.error('Logout error:', err)
-      // Paksa redirect meski error
-      window.location.href = '/'
+    if (isGuest) {
+      clearGuestAccount()
+    } else {
+      await supabase.auth.signOut({ scope: 'local' })
+      localStorage.removeItem('auth_mode')
     }
+    window.location.href = '/'
   }
   
   const pagedActive   = activeRooms.slice(0, activePage * ACTIVE_PAGE_SIZE)
