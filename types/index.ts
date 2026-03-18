@@ -8,7 +8,21 @@ export interface User {
   coins: number
   total_wins: number
   total_games: number
+  win_streak: number
   created_at: string
+
+  // Role flags
+  is_admin: boolean
+  is_contributor: boolean
+  is_guest: boolean
+  is_banned: boolean
+
+  // Contributor workflow
+  contributor_status?: 'pending' | 'approved' | 'rejected' | null
+
+  // Guest
+  guest_expires_at?: string | null
+  last_active?: string | null
 }
 
 export interface GameRoom {
