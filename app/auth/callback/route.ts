@@ -4,9 +4,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const code  = searchParams.get('code')
-  const next  = searchParams.get('next') ?? '/'
-  const error = searchParams.get('error')
+  const code     = searchParams.get('code')
+  const next     = searchParams.get('next') ?? '/'
+  const error    = searchParams.get('error')
+  const upgraded = searchParams.get('upgraded') // ✅ NEW: Check if this is upgrade flow
 
   // Kalau ada error dari Supabase (misalnya link expired)
   if (error) {
@@ -19,19 +20,19 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies()
 
     const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
         cookies: {
-        get: (name) => cookieStore.get(name)?.value,
-        set: (name, value, options) => {
+          get: (name) => cookieStore.get(name)?.value,
+          set: (name, value, options) => {
             cookieStore.set({ name, value, ...options })
-        },
-        remove: (name, options) => {
+          },
+          remove: (name, options) => {
             cookieStore.delete({ name, ...options })
+          },
         },
-        },
-    }
+      }
     )
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
@@ -40,9 +41,12 @@ export async function GET(request: NextRequest) {
       // Cek role untuk redirect yang tepat
       const { data: user } = await supabase
         .from('users')
-        .select('is_admin, is_contributor, contributor_status')
+        .select('is_admin, is_contributor, contributor_status, is_guest')
         .eq('id', data.user.id)
         .single()
+
+      // ✅ NEW: Determine flow type
+      const flowType = upgraded === 'true' ? 'upgraded' : 'registered'
 
       // Redirect ke halaman sukses dulu (tampil pesan konfirmasi)
       // lalu dari sana redirect ke panel yang sesuai
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
         : 'user'
 
       return NextResponse.redirect(
-        new URL(`/auth/confirmed?status=success&role=${role}`, request.url)
+        new URL(`/auth/confirmed?status=success&role=${role}&flow=${flowType}`, request.url)
       )
     }
   }

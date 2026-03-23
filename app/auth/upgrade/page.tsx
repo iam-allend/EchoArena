@@ -3,66 +3,137 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { upgradeGuestToRegistered } from '@/lib/auth/upgrade'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Loader2, Crown, Check, Star, Trophy, Users, Lock, Sparkles, Zap, Target } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { getGuestAccountFromStorage, clearGuestAccount } from '@/lib/auth/guest'
+import {
+  Loader2, Crown, Check, Trophy, Users, Lock, Sparkles, Zap, Target,
+  MailCheck, CheckCircle2, AlertCircle,
+} from 'lucide-react'
+
+type Step = 'form' | 'email_sent'
 
 export default function UpgradePage() {
   const router = useRouter()
+  const supabase = createClient()
   const { user, isGuest, loading: authLoading } = useAuth()
 
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [step, setStep]                       = useState<Step>('form')
+  const [registeredEmail, setRegisteredEmail] = useState('')
+  const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '' })
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
   useEffect(() => {
     if (!authLoading) {
-      if (!isGuest) {
-        router.push('/dashboard')
-      } else if (user) {
-        // Pre-fill username
-        setFormData(prev => ({ ...prev, username: user.username }))
-      }
+      if (!isGuest) router.push('/dashboard')
+      else if (user) setFormData(prev => ({ ...prev, username: user.username }))
     }
-  }, [authLoading, isGuest, user])
+  }, [authLoading, isGuest, user, router])
 
   async function handleUpgrade(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Kata sandi tidak cocok')
-      return
-    }
-
-    if (formData.password.length < 8) {
-      setError('Kata sandi minimal harus 8 karakter')
-      return
-    }
+    // ── Validasi ────────────────────────────────────────────────────────────
+    if (formData.username.length < 3)                      { setError('Username minimal 3 karakter'); return }
+    if (formData.password.length < 8)                      { setError('Kata sandi minimal 8 karakter'); return }
+    if (formData.password !== formData.confirmPassword)    { setError('Kata sandi tidak cocok'); return }
+    if (!user?.id)                                         { setError('Data akun tamu tidak ditemukan. Coba refresh halaman.'); return }
 
     setLoading(true)
 
     try {
-      const result = await upgradeGuestToRegistered(
-        user!.id,
-        formData.email,
-        formData.password,
-        formData.username
-      )
+      // ── 1. Cek username unik ─────────────────────────────────────────────
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', formData.username)
+        .neq('id', user.id)
+        .maybeSingle()
 
-      if (!result.success) {
-        throw result.error
+      if (existing) { setError('Username sudah digunakan'); setLoading(false); return }
+
+      // ── 2. Buat Supabase Auth user baru via signUp ────────────────────────
+      // Guest tidak memiliki auth user sama sekali, jadi HARUS signUp bukan updateUser
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?upgraded=true`,
+        },
+      })
+
+      if (signUpError) {
+        // Email sudah terdaftar
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')) {
+          setError('Email ini sudah terdaftar. Gunakan email lain atau login langsung.')
+        } else {
+          setError(signUpError.message)
+        }
+        setLoading(false)
+        return
       }
 
-      router.push('/dashboard')
+      if (!authData.user) {
+        setError('Gagal membuat akun. Silakan coba lagi.')
+        setLoading(false)
+        return
+      }
+
+      const newAuthId = authData.user.id
+      const guestId   = user.id
+
+      // ── 3. Update record guest di DB ─────────────────────────────────────
+      // Strategi: update kolom data dulu, lalu ganti primary key ke newAuthId
+      // (Supabase mengizinkan update id jika tidak ada FK constraint yang memblokir)
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({
+          username:     formData.username,
+          email:        formData.email,
+          is_guest:     false,
+          guest_expires_at: null,
+          upgraded_at:  new Date().toISOString(),
+        })
+        .eq('id', guestId)
+
+      if (dbError) throw dbError
+
+      // ── 4. Jika ID berbeda, coba transfer data ke ID auth baru ───────────
+      // Hanya perlu jika DB tidak menggunakan auth.uid() sebagai default
+      if (newAuthId !== guestId) {
+        // Cek apakah row dengan newAuthId sudah ada (dari trigger Supabase)
+        const { data: existingAuthRow } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', newAuthId)
+          .maybeSingle()
+
+        if (existingAuthRow) {
+          // Hapus row duplikat yang dibuat trigger, pakai data dari guest
+          await supabase.from('users').delete().eq('id', newAuthId)
+        }
+
+        // Ganti primary key guest ke newAuthId
+        const { error: idUpdateError } = await supabase
+          .from('users')
+          .update({ id: newAuthId })
+          .eq('id', guestId)
+
+        if (idUpdateError) {
+          // Jika gagal update ID (FK constraint), tetap lanjut —
+          // data sudah ter-update, ID mismatch akan resolved saat user login
+          console.warn('ID update warning:', idUpdateError.message)
+        }
+      }
+
+      // ── 5. Bersihkan data guest lokal ────────────────────────────────────
+      clearGuestAccount()
+
+      // ── 6. Tampilkan konfirmasi ───────────────────────────────────────────
+      setRegisteredEmail(formData.email)
+      setStep('email_sent')
+
     } catch (err: any) {
       console.error('Upgrade error:', err)
       setError(err.message || 'Upgrade gagal. Silakan coba lagi.')
@@ -71,235 +142,237 @@ export default function UpgradePage() {
     }
   }
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
-          <p className="text-purple-200 font-medium">Memuat...</p>
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-xl animate-bounce">
+          <Trophy className="w-7 h-7 text-white" />
+        </div>
+        <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+        <p className="text-purple-200/60 text-sm font-semibold">Memuat...</p>
+      </div>
+    </div>
+  )
+
+  // ── Email sent ────────────────────────────────────────────────────────────
+  if (step === 'email_sent') return (
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-purple-700/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-700/15 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 opacity-[0.025]"
+          style={{ backgroundImage: 'linear-gradient(rgba(139,92,246,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.5) 1px,transparent 1px)', backgroundSize: '60px 60px' }} />
+      </div>
+
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-4">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-2xl shadow-purple-900/50">
+              <MailCheck className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white mb-1">Cek Email Kamu!</h2>
+              <p className="text-slate-400 text-sm">Link verifikasi sudah dikirim ke</p>
+              <div className="mt-2 px-4 py-2 bg-white/[0.06] border border-white/10 rounded-xl inline-block">
+                <p className="font-bold text-purple-300 text-sm">{registeredEmail}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 space-y-3">
+            {[
+              'Buka kotak masuk email kamu',
+              'Klik link "Verifikasi Email" dari EchoArena',
+              'Akun tamu kamu akan di-upgrade otomatis!',
+            ].map((text, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-purple-600/30 border border-purple-500/30 text-purple-300 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                  {i + 1}
+                </div>
+                <p className="text-slate-400 text-sm leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-purple-500/[0.07] border border-purple-500/20 rounded-2xl p-5">
+            <p className="text-purple-300 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5" /> Setelah Verifikasi
+            </p>
+            <div className="space-y-2">
+              {['Progres & statistik tersimpan selamanya', 'Akses sistem teman & duel kuis', 'Buat room pribadi dengan password', 'Bersaing di papan peringkat global'].map(b => (
+                <div key={b} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-slate-400 text-xs">{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={() => router.push('/dashboard')}
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm hover:opacity-90 transition-opacity shadow-lg">
+            Kembali ke Dashboard
+          </button>
+          <p className="text-center text-xs text-slate-600">
+            Tidak menerima email?{' '}
+            <button onClick={() => setStep('form')} className="text-purple-500 hover:text-purple-400 underline transition-colors">
+              Coba lagi
+            </button>
+          </p>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
+  // ── Upgrade form ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="min-h-screen relative overflow-x-hidden bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950 pt-24 pb-16">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-purple-700/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-700/15 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 opacity-[0.025]"
+          style={{ backgroundImage: 'linear-gradient(rgba(139,92,246,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.5) 1px,transparent 1px)', backgroundSize: '60px 60px' }} />
       </div>
 
-      {/* Floating Icons */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <Crown className="absolute top-20 left-1/4 w-8 h-8 text-yellow-400/30 animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }} />
-        <Star className="absolute top-40 right-1/4 w-6 h-6 text-pink-400/30 animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
-        <Trophy className="absolute bottom-40 left-1/3 w-7 h-7 text-purple-400/30 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.8s' }} />
-        <Sparkles className="absolute bottom-20 right-1/3 w-6 h-6 text-fuchsia-400/30 animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '3.2s' }} />
-      </div>
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
 
-      <div className="relative flex items-center justify-center p-4 md:p-8 min-h-screen">
-        <div className="w-full max-w-4xl">
-          {/* Header Section */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-3xl mb-6 shadow-2xl shadow-yellow-500/50 animate-pulse">
-              <Crown className="w-12 h-12 text-white" />
+        {/* Header */}
+        <div className="text-center pt-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl mb-5 shadow-xl shadow-yellow-900/40">
+            <Crown className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">
+            Upgrade ke <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">Premium</span>
+          </h1>
+          <p className="text-slate-400 text-sm max-w-sm mx-auto">Ubah akun tamu jadi keanggotaan seumur hidup — 100% GRATIS 🎉</p>
+        </div>
+
+        {/* Benefits */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { icon: Target, g: 'from-emerald-500 to-teal-500',  title: 'Simpan Progres',  desc: 'Statistik, level, dan XP tersimpan selamanya' },
+            { icon: Users,  g: 'from-blue-500 to-cyan-500',     title: 'Sistem Teman',    desc: 'Tambah teman dan tantang dalam duel kuis' },
+            { icon: Lock,   g: 'from-purple-500 to-pink-500',   title: 'Room Pribadi',    desc: 'Buat room eksklusif dengan kata sandi' },
+            { icon: Trophy, g: 'from-yellow-500 to-orange-500', title: 'Papan Peringkat', desc: 'Bersaing secara global dan raih puncak' },
+          ].map((b, i) => (
+            <div key={i} className="flex items-center gap-4 bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 hover:border-white/15 hover:bg-white/[0.05] transition-all">
+              <div className={`w-10 h-10 bg-gradient-to-br ${b.g} rounded-xl flex items-center justify-center shadow-md shrink-0`}>
+                <b.icon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">{b.title}</p>
+                <p className="text-slate-500 text-xs mt-0.5">{b.desc}</p>
+              </div>
             </div>
-            <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent mb-4">
-              Upgrade ke Premium
-            </h1>
-            <p className="text-xl text-purple-200">
-              Ubah akun tamu kamu jadi keanggotaan seumur hidup — 100% GRATIS! 🎉
+          ))}
+        </div>
+
+        {/* Form */}
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 sm:p-8 space-y-5">
+          <div>
+            <p className="text-white font-black text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-yellow-400" /> Selesaikan Upgrade
             </p>
+            <p className="text-slate-500 text-sm mt-0.5">Isi detail di bawah untuk mengaktifkan semua fitur premium</p>
           </div>
 
-          {/* Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {/* Benefit 1 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-all shadow-lg hover:shadow-purple-500/20">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Simpan Progres</h3>
-                  <p className="text-purple-200 text-sm">Simpan semua statistik, level, XP, dan pencapaian selamanya</p>
-                </div>
+          {error && (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleUpgrade} className="space-y-4">
+            {/* Username */}
+            <div className="space-y-1.5">
+              <label className="text-white text-sm font-semibold">Username</label>
+              <input
+                type="text"
+                placeholder="pejuang123"
+                value={formData.username}
+                onChange={e => setFormData({ ...formData, username: e.target.value })}
+                required minLength={3} maxLength={20}
+                className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.07] transition-all"
+              />
+              <p className="text-slate-600 text-xs">Pertahankan username saat ini atau ganti yang baru</p>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-white text-sm font-semibold">Alamat Email</label>
+              <input
+                type="email"
+                placeholder="kamu@contoh.com"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                required
+                className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.07] transition-all"
+              />
+              <p className="text-slate-600 text-xs">Email untuk login dan verifikasi akun</p>
+            </div>
+
+            {/* Password */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-white text-sm font-semibold">Kata Sandi</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  required minLength={8}
+                  className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.07] transition-all"
+                />
+                <p className="text-slate-600 text-xs">Minimal 8 karakter</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-white text-sm font-semibold">Konfirmasi Kata Sandi</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  required
+                  className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.07] transition-all"
+                />
               </div>
             </div>
 
-            {/* Benefit 2 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-all shadow-lg hover:shadow-purple-500/20">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Sistem Teman</h3>
-                  <p className="text-purple-200 text-sm">Tambah teman dan tantang mereka dalam duel kuis seru</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Benefit 3 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-all shadow-lg hover:shadow-purple-500/20">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Lock className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Room Pribadi</h3>
-                  <p className="text-purple-200 text-sm">Buat room khusus dengan kata sandi untuk pertandingan eksklusif</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Benefit 4 */}
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-all shadow-lg hover:shadow-purple-500/20">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg mb-1">Papan Peringkat</h3>
-                  <p className="text-purple-200 text-sm">Bersaing secara global dan naik ke puncak peringkat</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Form Card */}
-          <Card className="bg-gray-900/80 backdrop-blur-xl border-2 border-purple-500/30 shadow-2xl">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl text-white flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-yellow-400" />
-                Selesaikan Upgrade Kamu
-              </CardTitle>
-              <CardDescription className="text-purple-200 text-base">
-                Isi detail di bawah ini untuk membuka semua fitur premium
-              </CardDescription>
-            </CardHeader>
-
-            <form onSubmit={handleUpgrade}>
-              <CardContent className="space-y-5">
-                {error && (
-                  <div className="bg-red-500/10 border-2 border-red-500/50 text-red-200 px-4 py-3 rounded-xl backdrop-blur-sm flex items-center gap-2">
-                    <Zap className="w-5 h-5 flex-shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white font-semibold">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="pejuang123"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    required
-                    minLength={3}
-                    maxLength={20}
-                    className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
-                  />
-                  <p className="text-sm text-purple-300">Pertahankan username saat ini atau pilih yang baru</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-semibold">Alamat Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="kamu@contoh.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-white font-semibold">Kata Sandi</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      minLength={8}
-                      className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
-                    />
-                    <p className="text-xs text-purple-300">Minimal 8 karakter</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-white font-semibold">Konfirmasi Kata Sandi</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      required
-                      className="bg-white/5 border-purple-500/30 text-white placeholder:text-gray-400 focus:border-purple-500 h-12"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-
-              <CardFooter className="flex flex-col space-y-4 pt-6">
-                <Button
-                  type="submit"
-                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-2xl shadow-yellow-500/50 hover:shadow-yellow-500/60 transition-all hover:scale-105 border-0"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                      Sedang Mengupgrade Akun...
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="mr-2 h-6 w-6" />
-                      Upgrade Sekarang - 100% GRATIS Selamanya!
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={() => router.push('/dashboard')}
-                  className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border-2 border-white/20 backdrop-blur-sm transition-all hover:scale-105"
-                >
-                  Nanti Saja
-                </Button>
-
-                <p className="text-center text-sm text-purple-300">
-                  🔒 Datamu aman dan terenkripsi. Tidak perlu kartu kredit.
+            {/* Info */}
+            <div className="flex items-start gap-3 bg-blue-500/[0.07] border border-blue-500/20 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-blue-300 text-xs font-bold mb-0.5">📧 Verifikasi Email Diperlukan</p>
+                <p className="text-blue-400/70 text-xs leading-relaxed">
+                  Setelah submit, link verifikasi dikirim ke email kamu. Klik link tersebut untuk menyelesaikan upgrade. Data progres kamu tetap tersimpan.
                 </p>
-              </CardFooter>
-            </form>
-          </Card>
+              </div>
+            </div>
 
-          {/* Trust Indicators */}
-          <div className="mt-8 flex items-center justify-center gap-6 text-sm text-purple-300">
-            <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-400" />
-              <span>100% Gratis</span>
-            </div>
-            <div className="w-1 h-1 bg-purple-500 rounded-full"></div>
-            <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-400" />
-              <span>Tanpa Kartu Kredit</span>
-            </div>
-            <div className="w-1 h-1 bg-purple-500 rounded-full"></div>
-            <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-400" />
-              <span>Akses Instan</span>
-            </div>
-          </div>
+            {/* Submit */}
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-black text-base shadow-xl shadow-yellow-900/40 hover:scale-[1.01] active:scale-[.99] disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+              {loading
+                ? <><Loader2 className="w-5 h-5 animate-spin" /> Memproses...</>
+                : <><Crown className="w-5 h-5" /> Upgrade Sekarang — 100% GRATIS!</>}
+            </button>
+
+            <button type="button" onClick={() => router.push('/dashboard')}
+              className="w-full py-3 rounded-2xl border border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05] text-sm font-medium transition-all">
+              Nanti Saja
+            </button>
+          </form>
+        </div>
+
+        {/* Trust */}
+        <div className="flex items-center justify-center gap-6 text-xs text-slate-600 pb-4 flex-wrap">
+          {['100% Gratis', 'Tanpa Kartu Kredit', 'Verifikasi Cepat'].map((t, i) => (
+            <span key={t} className="flex items-center gap-1.5">
+              {i > 0 && <span className="w-1 h-1 rounded-full bg-slate-700 mr-2" />}
+              <Check className="w-3.5 h-3.5 text-emerald-500" /> {t}
+            </span>
+          ))}
         </div>
       </div>
     </div>

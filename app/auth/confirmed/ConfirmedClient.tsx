@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   CheckCircle2, XCircle, Loader2, ArrowRight,
-  Sparkles, Crown, Trophy,
+  Sparkles, Crown, Trophy, Zap,
 } from 'lucide-react'
 
 export default function ConfirmedPage() {
@@ -14,6 +14,7 @@ export default function ConfirmedPage() {
   const status       = searchParams.get('status')
   const role         = searchParams.get('role')
   const message      = searchParams.get('message')
+  const flow         = searchParams.get('flow') // ✅ NEW: 'registered' or 'upgraded'
 
   const [countdown, setCountdown] = useState(5)
 
@@ -38,9 +39,10 @@ export default function ConfirmedPage() {
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [status, destination])
+  }, [status, destination, router])
 
   const isContributor = role === 'contributor' || role === 'pending'
+  const isUpgraded = flow === 'upgraded' // ✅ NEW: Check if this is upgrade flow
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (!status) {
@@ -75,11 +77,19 @@ export default function ConfirmedPage() {
             </p>
           </div>
           <div className="space-y-3 pt-2">
-            <Link href="/auth/register">
-              <button className="w-full h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
-                Daftar Ulang <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
+            {isUpgraded ? (
+              <Link href="/auth/upgrade">
+                <button className="w-full h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+                  Coba Upgrade Lagi <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+            ) : (
+              <Link href="/auth/register">
+                <button className="w-full h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+                  Daftar Ulang <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+            )}
             <Link href="/auth/login">
               <button className="w-full h-11 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-xl transition-colors">
                 Sudah punya akun? Masuk
@@ -96,18 +106,26 @@ export default function ConfirmedPage() {
     <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${
       isContributor
         ? 'bg-gradient-to-br from-slate-900 via-emerald-950/30 to-slate-900'
+        : isUpgraded
+        ? 'bg-gradient-to-br from-slate-900 via-yellow-950/30 to-slate-900'
         : 'bg-gradient-to-br from-slate-900 via-purple-950/40 to-slate-900'
     }`}>
 
       <div className="absolute inset-0 pointer-events-none">
-        <div className={`absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl animate-pulse ${isContributor ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`} />
-        <div className={`absolute bottom-20 right-10 w-96 h-96 rounded-full blur-3xl animate-pulse ${isContributor ? 'bg-teal-500/10' : 'bg-fuchsia-500/10'}`} style={{ animationDelay: '1s' }} />
+        <div className={`absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl animate-pulse ${
+          isContributor ? 'bg-emerald-500/15' : isUpgraded ? 'bg-yellow-500/15' : 'bg-purple-500/15'
+        }`} />
+        <div className={`absolute bottom-20 right-10 w-96 h-96 rounded-full blur-3xl animate-pulse ${
+          isContributor ? 'bg-teal-500/10' : isUpgraded ? 'bg-orange-500/10' : 'bg-fuchsia-500/10'
+        }`} style={{ animationDelay: '1s' }} />
       </div>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <Sparkles className="absolute top-24 left-1/4 w-7 h-7 text-yellow-400/25 animate-bounce" style={{ animationDuration: '3s' }} />
         <Trophy className="absolute top-32 right-1/4 w-6 h-6 text-yellow-400/20 animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
-        {isContributor && <Crown className="absolute bottom-32 right-1/3 w-7 h-7 text-emerald-400/25 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.8s' }} />}
+        {(isContributor || isUpgraded) && (
+          <Crown className="absolute bottom-32 right-1/3 w-7 h-7 text-yellow-400/25 animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.8s' }} />
+        )}
       </div>
 
       <div className="relative w-full max-w-md bg-gray-900/80 backdrop-blur-xl rounded-3xl border border-gray-800 shadow-2xl p-8 text-center space-y-6">
@@ -116,32 +134,72 @@ export default function ConfirmedPage() {
         <div className={`w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-2xl ${
           isContributor
             ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-900/50'
+            : isUpgraded
+            ? 'bg-gradient-to-br from-yellow-500 to-orange-600 shadow-yellow-900/50'
             : 'bg-gradient-to-br from-purple-500 to-pink-600 shadow-purple-900/50'
         }`}>
-          <CheckCircle2 className="w-10 h-10 text-white" />
+          {isUpgraded ? <Crown className="w-10 h-10 text-white" /> : <CheckCircle2 className="w-10 h-10 text-white" />}
         </div>
 
         {/* Text */}
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-white">Email Terverifikasi! 🎉</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {isUpgraded ? 'Upgrade Berhasil! 👑' : 'Email Terverifikasi! 🎉'}
+          </h1>
           <p className="text-gray-400 text-sm leading-relaxed">
-            {isContributor
+            {isUpgraded
+              ? 'Akun tamu kamu berhasil di-upgrade ke akun premium. Selamat menikmati semua fitur eksklusif!'
+              : isContributor
               ? 'Akun pengajar kamu berhasil diaktifkan. Lengkapi data verifikasi pendidik untuk akses penuh.'
               : 'Akun kamu berhasil diaktifkan. Selamat datang di EchoArena!'}
           </p>
         </div>
 
-        {/* Role badge */}
+        {/* Role/Status badge */}
         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border ${
           isContributor
             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+            : isUpgraded
+            ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
             : 'bg-purple-500/10 border-purple-500/30 text-purple-300'
         }`}>
-          {isContributor ? <Crown className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
-          {isContributor ? 'Akun Pengajar / Kontributor' : 'Akun Peserta'}
+          {isContributor ? (
+            <><Crown className="w-4 h-4" /> Akun Pengajar / Kontributor</>
+          ) : isUpgraded ? (
+            <><Crown className="w-4 h-4" /> Akun Premium</>
+          ) : (
+            <><Trophy className="w-4 h-4" /> Akun Peserta</>
+          )}
         </div>
 
-        {/* Info pending */}
+        {/* ✅ NEW: Premium Benefits for Upgraded Users */}
+        {isUpgraded && (
+          <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-4 text-left space-y-2">
+            <p className="text-yellow-300 text-xs font-bold flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> Fitur Premium Aktif:
+            </p>
+            <div className="space-y-1 text-xs text-gray-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                <span>✨ Progres & statistik tersimpan selamanya</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                <span>🤝 Sistem teman & duel kuis</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                <span>🔒 Room pribadi dengan password</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                <span>🏆 Akses papan peringkat global</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info pending (for contributors) */}
         {role === 'pending' && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-left space-y-1">
             <p className="text-amber-300 text-xs font-bold">Langkah selanjutnya:</p>
@@ -158,9 +216,15 @@ export default function ConfirmedPage() {
             className={`w-full h-12 text-white font-bold rounded-xl transition-all hover:scale-[1.02] shadow-lg flex items-center justify-center gap-2 ${
               isContributor
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-900/30'
+                : isUpgraded
+                ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 shadow-yellow-900/30'
                 : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-900/30'
             }`}>
-            Masuk ke {destinationLabel} <ArrowRight className="w-4 h-4" />
+            {isUpgraded ? (
+              <>Mulai Gunakan Akun Premium <ArrowRight className="w-4 h-4" /></>
+            ) : (
+              <>Masuk ke {destinationLabel} <ArrowRight className="w-4 h-4" /></>
+            )}
           </button>
 
           <div className="space-y-1.5">
@@ -170,7 +234,9 @@ export default function ConfirmedPage() {
             </div>
             <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ${isContributor ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  isContributor ? 'bg-emerald-500' : isUpgraded ? 'bg-yellow-500' : 'bg-purple-500'
+                }`}
                 style={{ width: `${((5 - countdown) / 5) * 100}%` }}
               />
             </div>
