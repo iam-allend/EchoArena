@@ -67,4 +67,7 @@
 
 
 ========== BUG LIST ==========
-- Upgrade guest account need notifikasi if verification link will send to  mail
+- Upgrade guest account need notifikasi if verification link will send to  mail ✅
+
+========== DEV LIST ==========
+- 

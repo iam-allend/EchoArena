@@ -286,15 +286,41 @@ export default function Dashboard() {
         .order('joined_at', { ascending: false })
 
       if (!participants) return
+
+      // ── Auto-expire rooms > 24 jam yang masih waiting/playing ──────────────
+      const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+      const expiredIds = participants
+        .filter(p => {
+          const room = p.game_rooms as any
+          return (
+            room &&
+            (room.status === 'waiting' || room.status === 'playing') &&
+            new Date(room.created_at) < new Date(threshold)
+          )
+        })
+        .map(p => (p.game_rooms as any).id)
+
+      if (expiredIds.length > 0) {
+        await supabase
+          .from('game_rooms')
+          .update({ status: 'finished' })
+          .in('id', expiredIds)
+      }
+      // ───────────────────────────────────────────────────────────────────────
+
       const rooms: RoomHistory[] = participants.filter(p => p.game_rooms).map(p => {
         const room = p.game_rooms as any
+        // Terapkan status expired secara lokal juga (tanpa perlu fetch ulang)
+        const effectiveStatus = expiredIds.includes(room.id) ? 'finished' : room.status
         return {
-          id: room.id, room_code: room.room_code, status: room.status,
+          id: room.id, room_code: room.room_code, status: effectiveStatus,
           created_at: room.created_at, current_stage: room.current_stage,
           max_stages: room.max_stages, is_host: room.host_user_id === user.id,
           participant_status: p.status,
         }
       })
+
       const active = rooms.filter(r => (r.status === 'waiting' || r.status === 'playing') && r.participant_status === 'active')
       const past   = rooms.filter(r => r.status === 'finished')
       setActiveRooms(active); setActiveTotal(active.length)
@@ -359,6 +385,7 @@ export default function Dashboard() {
       }
     } catch {}
   }
+
 
   async function handleLogout() {
     if (isGuest) {
@@ -795,10 +822,16 @@ export default function Dashboard() {
                           {room.max_stages} babak
                         </p>
                       </div>
+                      
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0"
-                        style={{ background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.2)', color: 'rgba(52,211,153,.7)' }}>
-                        Selesai
+                        style={
+                          room.current_stage === 0
+                            ? { background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)', color: 'rgba(245,158,11,.7)' }
+                            : { background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.2)', color: 'rgba(52,211,153,.7)' }
+                        }>
+                        {room.current_stage === 0 ? 'Expired' : 'Selesai'}
                       </span>
+
                     </div>
                   ))}
                 </div>

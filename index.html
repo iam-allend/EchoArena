@@ -1,0 +1,1009 @@
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUDJANGGA — Future of Heritage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Raleway:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+    /* Core palette — dark warm bark, not cold black */
+    --void:#100D08;
+    --bark:#1C1610;
+    --timber:#2A1F14;
+    --wood:#3C2C1A;
+
+    /* Gold spectrum */
+    --gold:#C49A3C;
+    --gold-bright:#E2B84A;
+    --gold-muted:#8A6A28;
+    --gold-whisper:rgba(196,154,60,0.08);
+    --gold-glow:rgba(196,154,60,0.18);
+
+    /* Text */
+    --parchment:#F0E6CC;
+    --parchment-dim:#B09870;
+    --parchment-faint:#7A6848;
+
+    /* Accents */
+    --rust:#8B3A2A;
+    --indigo:#2A3860;
+
+    --border:rgba(196,154,60,0.14);
+    --border-strong:rgba(196,154,60,0.28);
+    }
+
+    html{scroll-behavior:smooth}
+    body{
+    background:var(--void);
+    color:var(--parchment);
+    font-family:'Raleway',sans-serif;
+    font-weight:300;
+    overflow-x:hidden;
+    cursor:none;
+    }
+    ::selection{background:var(--gold-muted);color:var(--parchment)}
+
+    /* ═══ CUSTOM CURSOR ═══ */
+    .cur{position:fixed;pointer-events:none;z-index:9999;top:0;left:0;mix-blend-mode:exclusion}
+    .cur-dot{width:6px;height:6px;background:var(--gold-bright);border-radius:50%;transform:translate(-50%,-50%);transition:width .25s,height .25s}
+    .cur-ring{position:fixed;pointer-events:none;z-index:9998;top:0;left:0;
+    width:28px;height:28px;border:1px solid var(--gold);border-radius:50%;
+    transform:translate(-50%,-50%);transition:width .35s,height .35s,opacity .35s;opacity:.45}
+    body.cursor-hover .cur-dot{width:12px;height:12px}
+    body.cursor-hover .cur-ring{width:48px;height:48px;opacity:.2}
+
+    /* ═══ NAV ═══ */
+    nav{
+    position:fixed;top:0;left:0;right:0;z-index:200;
+    height:68px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 56px;
+    background:linear-gradient(to bottom,rgba(16,13,8,.95) 0%,rgba(16,13,8,.7) 100%);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    }
+    .nav-logo{
+    font-family:'Playfair Display',serif;
+    font-size:22px;font-weight:400;letter-spacing:.08em;
+    color:var(--parchment);text-decoration:none;
+    display:flex;align-items:center;gap:3px;
+    }
+    .nav-logo-accent{color:var(--gold);font-style:italic}
+    .nav-links{display:flex;gap:44px}
+    .nav-links a{
+    font-size:11px;letter-spacing:.22em;color:var(--parchment-dim);
+    text-decoration:none;text-transform:uppercase;font-weight:400;
+    position:relative;transition:color .3s;
+    }
+    .nav-links a::after{
+    content:'';position:absolute;left:0;bottom:-3px;
+    width:0;height:1px;background:var(--gold);
+    transition:width .35s cubic-bezier(.76,0,.24,1);
+    }
+    .nav-links a:hover{color:var(--gold)}
+    .nav-links a:hover::after{width:100%}
+    .nav-right{display:flex;align-items:center;gap:20px}
+    .nav-icon{width:17px;height:17px;color:var(--parchment-dim);transition:color .25s;cursor:none}
+    .nav-icon:hover{color:var(--gold)}
+    .nav-cta{
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;
+    color:var(--void);background:var(--gold);padding:9px 22px;
+    text-decoration:none;border-radius:1px;
+    transition:background .25s,transform .2s;
+    }
+    .nav-cta:hover{background:var(--gold-bright);transform:translateY(-1px)}
+
+    /* ═══ BATIK SVG PATTERN (animated) ═══ */
+    .batik-canvas{
+    position:absolute;inset:0;overflow:hidden;pointer-events:none;
+    }
+    .batik-canvas svg{position:absolute;inset:0;width:100%;height:100%}
+
+    /* ═══ HERO ═══ */
+    .hero{
+    position:relative;min-height:100vh;width:100%;
+    display:flex;flex-direction:column;justify-content:flex-end;
+    overflow:hidden;
+    }
+    .hero-base{
+    position:absolute;inset:0;
+    background:
+        radial-gradient(ellipse 55% 65% at 72% 38%, rgba(92,58,22,.6) 0%,transparent 68%),
+        radial-gradient(ellipse 38% 45% at 18% 82%, rgba(44,28,12,.8) 0%,transparent 58%),
+        var(--bark);
+    }
+    /* Animated batik rings */
+    .batik-ring{
+    position:absolute;border-radius:50%;
+    border:1px solid rgba(196,154,60,.12);
+    animation:ringPulse 8s ease-in-out infinite;
+    }
+    @keyframes ringPulse{
+    0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.12}
+    50%{transform:translate(-50%,-50%) scale(1.06);opacity:.22}
+    }
+    /* Floating batik diamond motifs */
+    .batik-float{
+    position:absolute;pointer-events:none;
+    animation:floatDrift 12s ease-in-out infinite;
+    }
+    @keyframes floatDrift{
+    0%,100%{transform:translateY(0) rotate(45deg)}
+    50%{transform:translateY(-14px) rotate(45deg)}
+    }
+
+    /* Hero images */
+    .hero-panels{
+    position:absolute;right:0;top:0;bottom:0;width:56%;
+    display:flex;gap:3px;
+    }
+    .hero-panel{
+    flex:1;position:relative;overflow:hidden;
+    align-self:flex-end;
+    }
+    .hero-panel:nth-child(1){height:87%}
+    .hero-panel:nth-child(2){height:100%}
+    .hero-panel:nth-child(3){height:79%}
+    .hero-panel img{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:top center;
+    filter:brightness(.55) saturate(.75) sepia(.2);
+    transition:transform 1s cubic-bezier(.25,.46,.45,.94),filter .5s;
+    }
+    .hero-panel:hover img{transform:scale(1.05);filter:brightness(.65) saturate(.85) sepia(.15)}
+    .hero-panel-veil{
+    position:absolute;inset:0;z-index:1;
+    background:linear-gradient(to right,rgba(16,13,8,.6) 0%,transparent 35%,rgba(16,13,8,.2) 100%);
+    }
+    /* Batik texture overlay on each panel */
+    .hero-panel-batik{
+    position:absolute;inset:0;z-index:2;opacity:.09;
+    background-image:
+        repeating-linear-gradient(30deg,rgba(196,154,60,1) 0,rgba(196,154,60,1) .5px,transparent 0,transparent 50%),
+        repeating-linear-gradient(-30deg,rgba(196,154,60,1) 0,rgba(196,154,60,1) .5px,transparent 0,transparent 50%);
+    background-size:22px 22px;
+    }
+    .hero-panel-num{
+    position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:3;
+    font-size:8px;letter-spacing:.35em;color:rgba(196,154,60,.5);text-transform:uppercase;white-space:nowrap;
+    }
+    /* Left fade so content bleeds naturally */
+    .hero-left-fade{
+    position:absolute;left:0;top:0;bottom:0;width:56%;z-index:3;pointer-events:none;
+    background:linear-gradient(to right,rgba(16,13,8,1) 0%,rgba(16,13,8,.88) 42%,rgba(16,13,8,.0) 100%);
+    }
+
+    .hero-content{
+    position:relative;z-index:5;
+    padding:0 0 88px 56px;
+    max-width:600px;
+    opacity:0;transform:translateY(36px);
+    animation:contentIn 1.1s cubic-bezier(.4,0,.2,1) .5s forwards;
+    }
+    @keyframes contentIn{to{opacity:1;transform:none}}
+
+    .hero-eyebrow{
+    font-size:9px;letter-spacing:.55em;color:var(--gold);text-transform:uppercase;font-weight:500;
+    margin-bottom:22px;display:flex;align-items:center;gap:14px;
+    }
+    .hero-eyebrow::before{content:'';width:28px;height:1px;background:var(--gold);flex-shrink:0}
+    .hero-eyebrow::after{content:'';flex:1;max-width:60px;height:1px;background:linear-gradient(to right,var(--gold),transparent)}
+
+    .hero-title{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(74px,10.5vw,148px);line-height:.87;
+    font-weight:400;color:var(--parchment);letter-spacing:-.02em;
+    margin-bottom:30px;
+    }
+    .hero-title em{font-style:italic;color:var(--gold)}
+
+    .hero-sub{
+    font-size:13px;letter-spacing:.06em;color:var(--parchment-dim);
+    max-width:320px;margin-bottom:48px;line-height:1.9;font-weight:300;
+    }
+    .hero-actions{display:flex;align-items:center;gap:28px}
+    .btn-gold{
+    display:inline-flex;align-items:center;gap:14px;
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;
+    color:var(--void);background:var(--gold);
+    padding:15px 36px;border-radius:1px;text-decoration:none;
+    transition:background .3s,transform .2s;
+    }
+    .btn-gold:hover{background:var(--gold-bright);transform:translateY(-2px)}
+    .btn-ghost{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:400;
+    color:var(--parchment-dim);text-decoration:none;
+    border-bottom:1px solid var(--border-strong);padding-bottom:2px;
+    transition:color .25s,border-color .25s;
+    }
+    .btn-ghost:hover{color:var(--gold);border-color:var(--gold)}
+
+    .scroll-indicator{
+    position:absolute;right:56px;bottom:56px;z-index:5;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    }
+    .scroll-line{width:1px;height:52px;background:linear-gradient(to bottom,transparent,var(--gold));animation:scrollDrop 2.4s ease infinite}
+    @keyframes scrollDrop{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}50.01%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+    .scroll-label{font-size:8px;letter-spacing:.45em;color:rgba(196,154,60,.6);text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg)}
+
+    /* ═══ MARQUEE ═══ */
+    .marquee{background:var(--gold);padding:12px 0;overflow:hidden;display:flex}
+    .marquee-track{display:flex;animation:marqueeRun 24s linear infinite;white-space:nowrap}
+    .marquee-item{
+    font-size:10px;letter-spacing:.38em;text-transform:uppercase;font-weight:500;
+    color:var(--void);padding:0 40px;display:flex;align-items:center;gap:40px;
+    }
+    .marquee-sep{width:3px;height:3px;background:rgba(16,13,8,.4);border-radius:50%}
+    @keyframes marqueeRun{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+    /* ═══ PAGE BODY (constrained) ═══ */
+    .body-wrap{max-width:1320px;margin:0 auto;padding:0 56px}
+
+    /* ═══ INTRO ═══ */
+    .intro{
+    padding:104px 0 80px;
+    display:grid;grid-template-columns:1fr 1.1fr;gap:88px;align-items:center;
+    }
+    .intro-tag{
+    font-size:9px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;font-weight:500;
+    margin-bottom:22px;display:flex;align-items:center;gap:12px;
+    }
+    .intro-tag::before{content:'';width:22px;height:1px;background:var(--gold)}
+    .intro-headline{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(38px,3.8vw,54px);font-weight:400;
+    line-height:1.16;color:var(--parchment);
+    }
+    .intro-headline em{font-style:italic;color:var(--gold)}
+    .intro-body{
+    font-size:14.5px;line-height:1.95;color:var(--parchment-dim);margin-bottom:40px;font-weight:300;
+    }
+    .stats-row{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    border-top:1px solid var(--border);padding-top:36px;gap:0;
+    }
+    .stat{padding-right:24px}
+    .stat + .stat{padding-left:24px;border-left:1px solid var(--border);padding-right:24px}
+    .stat-num{
+    font-family:'Playfair Display',serif;font-size:48px;font-weight:400;
+    color:var(--gold);display:block;line-height:1;margin-bottom:8px;
+    }
+    .stat-label{font-size:10px;letter-spacing:.22em;color:var(--parchment-faint);text-transform:uppercase;font-weight:400}
+
+    /* ═══ COLLECTION ═══ */
+    .collection{padding:0 0 104px}
+    .sec-header{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    margin-bottom:48px;padding-bottom:22px;border-bottom:1px solid var(--border);
+    }
+    .sec-tag{font-size:9px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;font-weight:500;margin-bottom:10px}
+    .sec-title{
+    font-family:'Playfair Display',serif;font-size:clamp(30px,3vw,42px);
+    font-weight:400;color:var(--parchment);letter-spacing:-.01em;
+    }
+    .sec-link{
+    font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;
+    color:var(--parchment-dim);text-decoration:none;
+    border-bottom:1px solid var(--border-strong);padding-bottom:3px;
+    transition:color .25s,border-color .25s;white-space:nowrap;
+    }
+    .sec-link:hover{color:var(--gold);border-color:var(--gold)}
+
+    .grid-products{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr;
+    grid-template-rows:auto auto;
+    gap:14px;
+    }
+    .pcard{
+    background:var(--timber);border:1px solid var(--border);
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    border-radius:2px;
+    transition:border-color .3s,box-shadow .4s;
+    }
+    .pcard:hover{
+    border-color:var(--border-strong);
+    box-shadow:0 16px 56px rgba(0,0,0,.55),0 0 0 1px rgba(196,154,60,.12);
+    }
+    .pcard:first-child{grid-row:span 2}
+    .pcard-img{flex:1;min-height:270px;position:relative;overflow:hidden}
+    .pcard:first-child .pcard-img{min-height:448px}
+    .pcard-fill{position:absolute;inset:0;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
+    .pcard:hover .pcard-fill{transform:scale(1.05)}
+    .pcard-fill img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.72) saturate(.8) sepia(.15)}
+    .pcard:hover .pcard-fill img{filter:brightness(.8) saturate(.9) sepia(.1)}
+    .pcard-veil{
+    position:absolute;inset:0;
+    background:linear-gradient(to bottom,transparent 45%,rgba(10,8,4,.65) 100%);
+    }
+    /* Per-card batik overlay pattern */
+    .pcard-pat{
+    position:absolute;inset:0;z-index:1;pointer-events:none;
+    opacity:.1;
+    background-image:
+        repeating-linear-gradient(45deg,rgba(196,154,60,1) 0,rgba(196,154,60,1) .5px,transparent 0,transparent 50%),
+        repeating-linear-gradient(-45deg,rgba(196,154,60,1) 0,rgba(196,154,60,1) .5px,transparent 0,transparent 50%);
+    background-size:20px 20px;
+    transition:opacity .4s;
+    }
+    .pcard:hover .pcard-pat{opacity:.15}
+    .pcard-badge{
+    position:absolute;top:16px;left:16px;z-index:4;
+    font-size:8px;letter-spacing:.25em;text-transform:uppercase;font-weight:600;
+    background:var(--gold);color:var(--void);
+    padding:5px 12px;border-radius:1px;
+    }
+    .pcard-info{
+    padding:20px 22px;border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:flex-end;
+    background:var(--timber);
+    }
+    .pcard-name{
+    font-family:'Playfair Display',serif;font-size:17px;font-weight:400;
+    color:var(--parchment);margin-bottom:4px;
+    }
+    .pcard-cat{font-size:8.5px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase;font-weight:500}
+    .pcard-price{
+    font-family:'Playfair Display',serif;font-size:18px;font-weight:400;
+    color:var(--parchment-dim);text-align:right;
+    }
+    .pcard-price small{display:block;font-family:'Raleway',sans-serif;font-size:8px;letter-spacing:.18em;color:var(--parchment-faint);text-transform:uppercase;margin-bottom:2px}
+    .pcard-cta{
+    position:absolute;bottom:70px;left:50%;transform:translateX(-50%) translateY(14px);
+    opacity:0;transition:opacity .3s,transform .3s;
+    background:var(--gold);color:var(--void);z-index:5;
+    font-size:9px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;
+    padding:11px 26px;border:none;cursor:none;border-radius:1px;white-space:nowrap;
+    }
+    .pcard:hover .pcard-cta{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* ═══ EDITORIAL SPLIT ═══ */
+    .editorial{
+    margin-bottom:104px;
+    display:grid;grid-template-columns:1fr 1.08fr;
+    border:1px solid var(--border);border-radius:2px;overflow:hidden;
+    min-height:500px;
+    }
+    .ed-visual{position:relative;overflow:hidden;background:var(--void)}
+    .ed-visual img{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:center;
+    filter:brightness(.55) saturate(.75) sepia(.25);
+    transition:transform 1s cubic-bezier(.25,.46,.45,.94);
+    }
+    .editorial:hover .ed-visual img{transform:scale(1.04)}
+    .ed-visual-veil{
+    position:absolute;inset:0;z-index:1;
+    background:linear-gradient(120deg,rgba(16,13,8,.35) 0%,rgba(16,13,8,.1) 100%);
+    }
+    /* Animated SVG batik motif on editorial panel */
+    .ed-batik{position:absolute;inset:0;z-index:2;overflow:hidden}
+    .ed-batik svg{width:100%;height:100%}
+    .ed-label{
+    position:absolute;bottom:28px;left:28px;z-index:3;
+    font-size:8.5px;letter-spacing:.38em;color:rgba(196,154,60,.65);text-transform:uppercase;
+    background:rgba(16,13,8,.55);padding:5px 12px;border-radius:1px;backdrop-filter:blur(4px);
+    }
+    .ed-content{
+    padding:60px 60px;display:flex;flex-direction:column;justify-content:center;
+    background:var(--bark);
+    border-left:1px solid var(--border);
+    }
+    .ed-kicker{
+    font-size:9px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;font-weight:500;
+    margin-bottom:24px;display:flex;align-items:center;gap:14px;
+    }
+    .ed-kicker::before{content:'';width:22px;height:1px;background:var(--gold)}
+    .ed-title{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(34px,3.2vw,46px);font-weight:400;line-height:1.13;
+    color:var(--parchment);margin-bottom:24px;letter-spacing:-.01em;
+    }
+    .ed-title em{font-style:italic;color:var(--gold)}
+    .ed-quote{
+    border-left:2px solid var(--gold);padding-left:22px;margin-bottom:28px;
+    font-family:'Playfair Display',serif;font-size:19px;font-style:italic;
+    color:rgba(240,230,204,.65);line-height:1.65;font-weight:400;
+    }
+    .ed-body{
+    font-size:13.5px;line-height:1.9;color:var(--parchment-dim);margin-bottom:36px;
+    }
+
+    /* ═══ PROCESS ═══ */
+    .process{
+    padding:88px 0 104px;
+    border-top:1px solid var(--border);
+    }
+    .process-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    gap:0;background:var(--border);
+    border:1px solid var(--border);border-radius:2px;overflow:hidden;
+    margin-top:52px;
+    }
+    .pstep{
+    background:var(--bark);padding:44px 32px;
+    position:relative;overflow:hidden;
+    transition:background .35s;
+    }
+    .pstep:hover{background:var(--timber)}
+    .pstep::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+    background:linear-gradient(to right,var(--gold-muted),var(--gold));
+    transform:scaleX(0);transform-origin:left;
+    transition:transform .45s cubic-bezier(.76,0,.24,1);
+    }
+    .pstep:hover::after{transform:scaleX(1)}
+    /* Subtle batik motif inside each step */
+    .pstep::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px,rgba(196,154,60,.06) 1px,transparent 0);
+    background-size:18px 18px;
+    opacity:0;transition:opacity .35s;
+    }
+    .pstep:hover::before{opacity:1}
+    .pstep-num{
+    font-family:'Playfair Display',serif;font-size:56px;font-weight:400;
+    color:rgba(196,154,60,.1);line-height:1;margin-bottom:18px;display:block;
+    transition:color .35s;
+    }
+    .pstep:hover .pstep-num{color:rgba(196,154,60,.2)}
+    .pstep-title{
+    font-family:'Playfair Display',serif;font-size:21px;font-weight:400;
+    color:var(--parchment);margin-bottom:12px;
+    }
+    .pstep-body{font-size:12.5px;line-height:1.85;color:var(--parchment-dim)}
+
+    /* ═══ TESTIMONIAL ═══ */
+    .testi-wrap{
+    position:relative;overflow:hidden;
+    background:var(--timber);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    padding:80px 0;
+    }
+    /* animated batik waves */
+    .testi-batik{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.07}
+    .testi-inner{max-width:1320px;margin:0 auto;padding:0 56px;text-align:center;position:relative;z-index:1}
+    .testi-label{font-size:9px;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:28px}
+    .testi-q{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(22px,2.6vw,34px);font-weight:400;font-style:italic;
+    color:var(--parchment);line-height:1.55;max-width:760px;margin:0 auto 20px;
+    transition:opacity .4s;
+    }
+    .testi-name{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-muted);font-weight:500}
+    .testi-dots{display:flex;justify-content:center;gap:8px;margin-top:28px}
+    .tdot{width:5px;height:5px;border-radius:50%;background:var(--border-strong);cursor:none;transition:background .3s,transform .3s}
+    .tdot.on{background:var(--gold);transform:scale(1.4)}
+
+    /* ═══ FOOTER CTA ═══ */
+    .footer-cta{
+    padding:100px 0 0;text-align:center;
+    position:relative;overflow:hidden;
+    }
+    .fcta-title{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(52px,8vw,112px);font-weight:400;
+    color:var(--parchment);line-height:.9;letter-spacing:-.03em;margin-bottom:32px;
+    }
+    .fcta-title em{font-style:italic;color:var(--gold)}
+    .fcta-sub{font-size:12px;letter-spacing:.08em;color:var(--parchment-faint);margin-bottom:44px}
+    .fcta-sub a{color:var(--gold-muted);text-decoration:none;transition:color .25s}
+    .fcta-sub a:hover{color:var(--gold)}
+    .fcta-btns{display:flex;justify-content:center;gap:16px;margin-bottom:88px;flex-wrap:wrap}
+    .footer-bar{
+    border-top:1px solid var(--border);
+    padding:26px 0;
+    max-width:1320px;margin:0 auto;padding-left:56px;padding-right:56px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:10px;letter-spacing:.18em;color:var(--parchment-faint);text-transform:uppercase;
+    }
+    .footer-soc{display:flex;gap:24px}
+    .footer-soc a{color:var(--parchment-faint);text-decoration:none;font-size:10px;letter-spacing:.18em;transition:color .25s}
+    .footer-soc a:hover{color:var(--gold)}
+
+    /* ═══ SCROLL REVEAL ═══ */
+    .reveal{opacity:0;transform:translateY(26px);transition:opacity .85s ease,transform .85s ease}
+    .reveal.vis{opacity:1;transform:none}
+    .rd1{transition-delay:.1s}.rd2{transition-delay:.2s}.rd3{transition-delay:.3s}
+
+    /* ═══ RESPONSIVE ═══ */
+    @media(max-width:960px){
+    nav{padding:0 24px}
+    .nav-links{display:none}
+    .body-wrap{padding:0 24px}
+    .hero-content{padding-left:24px;padding-bottom:64px}
+    .hero-panels{width:60%}
+    .scroll-indicator{right:24px;bottom:40px}
+    .intro{grid-template-columns:1fr;gap:44px;padding:72px 0 56px}
+    .stats-row{grid-template-columns:repeat(3,1fr)}
+    .grid-products{grid-template-columns:1fr 1fr;gap:10px}
+    .pcard:first-child{grid-row:span 1}
+    .editorial{grid-template-columns:1fr;margin-bottom:72px}
+    .ed-visual{min-height:280px}
+    .ed-content{padding:44px 32px}
+    .process-grid{grid-template-columns:1fr 1fr}
+    .testi-inner{padding:0 24px}
+    .footer-cta{padding:72px 0 0}
+    .footer-bar{padding:22px 24px;flex-direction:column;gap:16px;text-align:center}
+    }
+    @media(max-width:580px){
+    .process-grid{grid-template-columns:1fr}
+    .grid-products{grid-template-columns:1fr}
+    .stats-row{grid-template-columns:1fr;gap:24px}
+    .stat+.stat{border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:24px}
+    }
+    </style>
+    </head>
+    <body>
+
+    <div class="cur" id="curDot"><div class="cur-dot"></div></div>
+    <div class="cur-ring" id="curRing"></div>
+
+    <!-- ═══ NAV ═══ -->
+    <nav>
+    <a href="#" class="nav-logo">Pudj<span class="nav-logo-accent">angga</span></a>
+    <div class="nav-links">
+        <a href="#">Produk</a>
+        <a href="#">Koleksi</a>
+        <a href="#">Tentang</a>
+        <a href="#">Kontak</a>
+    </div>
+    <div class="nav-right">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M17 17l4 4"/></svg>
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <a href="#" class="nav-cta">Belanja</a>
+    </div>
+    </nav>
+
+    <!-- ═══ HERO ═══ -->
+    <section class="hero">
+    <div class="hero-base"></div>
+
+    <!-- Animated batik rings -->
+    <div class="batik-canvas" aria-hidden="true" id="batikRings"></div>
+
+    <!-- Floating diamond motifs -->
+    <div id="batikDiamonds" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden"></div>
+
+    <!-- Model panels -->
+    <div class="hero-panels">
+        <div class="hero-panel">
+        <img src="https://images.unsplash.com/photo-1680345575812-2f6878d7d775?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Model batik 01" loading="eager">
+        <div class="hero-panel-veil"></div>
+        <div class="hero-panel-batik"></div>
+        <div class="hero-panel-num">01</div>
+        </div>
+        <div class="hero-panel">
+        <img src="https://images.unsplash.com/photo-1724985975331-64eb105ff20b?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Model batik 02" loading="eager">
+        <div class="hero-panel-veil"></div>
+        <div class="hero-panel-batik"></div>
+        <div class="hero-panel-num">02</div>
+        </div>
+        <div class="hero-panel">
+        <img src="https://images.unsplash.com/photo-1630929436231-91f4c6fe4884?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Model batik 03" loading="eager">
+        <div class="hero-panel-veil"></div>
+        <div class="hero-panel-batik"></div>
+        <div class="hero-panel-num">03</div>
+        </div>
+    </div>
+
+    <div class="hero-left-fade"></div>
+
+    <div class="hero-content">
+        <div class="hero-eyebrow">Future of Heritage</div>
+        <h1 class="hero-title">Batik<br><em>Pudjangga</em></h1>
+        <p class="hero-sub">Merajut tradisi dalam gerak — warisan leluhur yang terus hidup dan bernapas.</p>
+        <div class="hero-actions">
+        <a href="#" class="btn-gold">Jelajahi Koleksi <span style="font-size:15px;margin-left:2px">→</span></a>
+        <a href="#" class="btn-ghost">Kisah Kami →</a>
+        </div>
+    </div>
+
+    <div class="scroll-indicator">
+        <div class="scroll-line"></div>
+        <span class="scroll-label">Scroll</span>
+    </div>
+    </section>
+
+    <!-- ═══ MARQUEE ═══ -->
+    <div class="marquee">
+    <div class="marquee-track" id="mtrack">
+        <div class="marquee-item">Batik Kontemporer <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Warisan Nusantara <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Handcrafted Heritage <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Wear Tradition in Motion <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Future of Heritage <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Koleksi 2025 <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Batik Kontemporer <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Warisan Nusantara <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Handcrafted Heritage <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Wear Tradition in Motion <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Future of Heritage <span class="marquee-sep"></span></div>
+        <div class="marquee-item">Koleksi 2025 <span class="marquee-sep"></span></div>
+    </div>
+    </div>
+
+    <!-- ═══ BODY ═══ -->
+    <div class="body-wrap">
+
+    <!-- INTRO -->
+    <section class="intro reveal">
+        <div>
+        <p class="intro-tag">Filosofi Kami</p>
+        <h2 class="intro-headline">Tradisi yang ditenun<br>untuk jiwa <em>modern</em></h2>
+        </div>
+        <div>
+        <p class="intro-body">Pudjangga lahir dari keyakinan bahwa batik bukan sekadar kain — ia adalah bahasa. Setiap goresan malam, setiap motif yang terukir adalah narasi dari peradaban yang terus bernapas. Kami menghadirkan warisan itu dalam bentuk yang relevan, berani, dan tanpa kompromi.</p>
+        <div class="stats-row">
+            <div class="stat">
+            <span class="stat-num">47+</span>
+            <span class="stat-label">Motif Khas</span>
+            </div>
+            <div class="stat">
+            <span class="stat-num">12</span>
+            <span class="stat-label">Pengrajin Ahli</span>
+            </div>
+            <div class="stat">
+            <span class="stat-num">100%</span>
+            <span class="stat-label">Handcrafted</span>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <!-- COLLECTION -->
+    <section class="collection">
+        <div class="sec-header reveal">
+        <div>
+            <p class="sec-tag">Koleksi Pilihan</p>
+            <h2 class="sec-title">Koleksi Kami</h2>
+        </div>
+        <a href="#" class="sec-link">Lihat Semua →</a>
+        </div>
+
+        <div class="grid-products reveal">
+        <div class="pcard">
+            <div class="pcard-img">
+            <div class="pcard-fill">
+                <img src="https://images.unsplash.com/photo-1615561077074-5d1f949c609d?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Celana Batik Parang" loading="lazy">
+                <div class="pcard-veil"></div>
+            </div>
+            <div class="pcard-pat"></div>
+            <span class="pcard-badge">Baru</span>
+            <button class="pcard-cta">Tambah ke Keranjang</button>
+            </div>
+            <div class="pcard-info">
+            <div>
+                <p class="pcard-name">Celana Batik Parang</p>
+                <p class="pcard-cat">Koleksi Utama</p>
+            </div>
+            <div class="pcard-price">
+                <small>Mulai dari</small>
+                Rp 425.000
+            </div>
+            </div>
+        </div>
+        <div class="pcard">
+            <div class="pcard-img">
+            <div class="pcard-fill">
+                <img src="https://images.unsplash.com/photo-1711955764834-a985a19bb30f?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Kemeja Kawung" loading="lazy">
+                <div class="pcard-veil"></div>
+            </div>
+            <div class="pcard-pat"></div>
+            <span class="pcard-badge">Terlaris</span>
+            <button class="pcard-cta">Tambah ke Keranjang</button>
+            </div>
+            <div class="pcard-info">
+            <div>
+                <p class="pcard-name">Kemeja Kawung</p>
+                <p class="pcard-cat">Koleksi Pria</p>
+            </div>
+            <div class="pcard-price">
+                <small>Mulai dari</small>
+                Rp 385.000
+            </div>
+            </div>
+        </div>
+        <div class="pcard">
+            <div class="pcard-img">
+            <div class="pcard-fill">
+                <img src="https://images.unsplash.com/photo-1745293007697-efa1084793ad?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Dress Mega Mendung" loading="lazy">
+                <div class="pcard-veil"></div>
+            </div>
+            <div class="pcard-pat"></div>
+            <button class="pcard-cta">Tambah ke Keranjang</button>
+            </div>
+            <div class="pcard-info">
+            <div>
+                <p class="pcard-name">Dress Mega Mendung</p>
+                <p class="pcard-cat">Koleksi Wanita</p>
+            </div>
+            <div class="pcard-price">
+                <small>Mulai dari</small>
+                Rp 520.000
+            </div>
+            </div>
+        </div>
+        <div class="pcard">
+            <div class="pcard-img">
+            <div class="pcard-fill">
+                <img src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=560&q=85&fit=crop&crop=center" alt="Tas Batik Sido Asih" loading="lazy">
+                <div class="pcard-veil"></div>
+            </div>
+            <div class="pcard-pat"></div>
+            <span class="pcard-badge">Eksklusif</span>
+            <button class="pcard-cta">Tambah ke Keranjang</button>
+            </div>
+            <div class="pcard-info">
+            <div>
+                <p class="pcard-name">Tas Batik Sido Asih</p>
+                <p class="pcard-cat">Aksesori</p>
+            </div>
+            <div class="pcard-price">
+                <small>Mulai dari</small>
+                Rp 290.000
+            </div>
+            </div>
+        </div>
+        <div class="pcard">
+            <div class="pcard-img">
+            <div class="pcard-fill">
+                <img src="https://images.unsplash.com/photo-1667562661355-9edc3968f486?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDd8fHxlbnwwfHx8fHw%3D" alt="Tas Batik Sido Asih" loading="lazy">
+                <div class="pcard-veil"></div>
+            </div>
+            <div class="pcard-pat"></div>
+            <span class="pcard-badge">Eksklusif</span>
+            <button class="pcard-cta">Tambah ke Keranjang</button>
+            </div>
+            <div class="pcard-info">
+            <div>
+                <p class="pcard-name">Tas Batik Sido Asih</p>
+                <p class="pcard-cat">Aksesori</p>
+            </div>
+            <div class="pcard-price">
+                <small>Mulai dari</small>
+                Rp 290.000
+            </div>
+            </div>
+        </div>
+
+        </div>
+            
+    </section>
+
+    <!-- EDITORIAL -->
+    <div class="editorial reveal">
+        <div class="ed-visual">
+        <img src="https://images.unsplash.com/photo-1614350292382-c448d0110dfa?w=800&q=85&fit=crop&crop=center" alt="Detail kerajinan batik" loading="lazy">
+        <div class="ed-visual-veil"></div>
+        <!-- Animated batik SVG overlay -->
+        <div class="ed-batik" aria-hidden="true">
+            <svg viewBox="0 0 500 520" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <pattern id="kawung" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+                <circle cx="30" cy="30" r="16" fill="none" stroke="rgba(196,154,60,1)" stroke-width=".8">
+                    <animate attributeName="r" values="16;18;16" dur="6s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="30" cy="30" r="9" fill="none" stroke="rgba(196,154,60,1)" stroke-width=".5"/>
+                <circle cx="30" cy="30" r="3" fill="rgba(196,154,60,.8)">
+                    <animate attributeName="r" values="3;4;3" dur="6s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="0" cy="0" r="3" fill="rgba(196,154,60,.6)"/>
+                <circle cx="60" cy="0" r="3" fill="rgba(196,154,60,.6)"/>
+                <circle cx="0" cy="60" r="3" fill="rgba(196,154,60,.6)"/>
+                <circle cx="60" cy="60" r="3" fill="rgba(196,154,60,.6)"/>
+                <line x1="0" y1="30" x2="14" y2="30" stroke="rgba(196,154,60,.5)" stroke-width=".5"/>
+                <line x1="46" y1="30" x2="60" y2="30" stroke="rgba(196,154,60,.5)" stroke-width=".5"/>
+                <line x1="30" y1="0" x2="30" y2="14" stroke="rgba(196,154,60,.5)" stroke-width=".5"/>
+                <line x1="30" y1="46" x2="30" y2="60" stroke="rgba(196,154,60,.5)" stroke-width=".5"/>
+                </pattern>
+            </defs>
+            <rect width="500" height="520" fill="url(#kawung)"/>
+            </svg>
+        </div>
+        <div class="ed-label">Detail Kerajinan Tangan</div>
+        </div>
+        <div class="ed-content">
+        <p class="ed-kicker">Cerita di Balik Kain</p>
+        <h2 class="ed-title">Setiap helai<br>adalah <em>doa</em><br>yang terukir</h2>
+        <blockquote class="ed-quote">"Batik bukan hanya kain — ia adalah jiwa yang menjaga ingatan leluhur tetap hidup."</blockquote>
+        <p class="ed-body">Setiap motif Pudjangga dikerjakan dengan teknik tradisional canting, membutuhkan kesabaran berhari-hari hingga berbulan-bulan. Kami percaya bahwa proses adalah bagian dari nilai — bukan hambatan untuk efisiensi.</p>
+        <a href="#" class="btn-gold" style="align-self:flex-start">Baca Kisah Kami <span style="font-size:15px">→</span></a>
+        </div>
+    </div>
+
+    <!-- PROCESS -->
+    <section class="process reveal">
+        <div class="sec-header">
+        <div>
+            <p class="sec-tag">Cara Kami Bekerja</p>
+            <h2 class="sec-title">Dari Malam<br>hingga Mahkota</h2>
+        </div>
+        </div>
+        <div class="process-grid">
+        <div class="pstep reveal">
+            <span class="pstep-num">01</span>
+            <h3 class="pstep-title">Desain & Riset Motif</h3>
+            <p class="pstep-body">Setiap koleksi dimulai dari riset mendalam terhadap motif klasik nusantara yang ditransformasi ke dalam bahasa visual kontemporer.</p>
+        </div>
+        <div class="pstep reveal rd1">
+            <span class="pstep-num">02</span>
+            <h3 class="pstep-title">Membatik dengan Canting</h3>
+            <p class="pstep-body">Teknik batik tulis tradisional — canting sebagai pena, malam sebagai tinta, kain sebagai kanvas kehidupan yang tak tergantikan.</p>
+        </div>
+        <div class="pstep reveal rd2">
+            <span class="pstep-num">03</span>
+            <h3 class="pstep-title">Pewarnaan Alami</h3>
+            <p class="pstep-body">Warna diambil dari alam — indigo dari tarum, cokelat dari soga, merah dari mengkudu — harmoni dengan bumi yang sesungguhnya.</p>
+        </div>
+        <div class="pstep reveal rd3">
+            <span class="pstep-num">04</span>
+            <h3 class="pstep-title">Quality & Finishing</h3>
+            <p class="pstep-body">Setiap karya melewati inspeksi ketat. Karena keunggulan bukan sekadar pilihan — ia adalah standar minimum yang tidak pernah kami kompromikan.</p>
+        </div>
+        </div>
+    </section>
+
+    </div><!-- end body-wrap -->
+
+    <!-- ═══ TESTIMONIAL ═══ -->
+    <div class="testi-wrap reveal">
+    <!-- Animated batik background -->
+    <div class="testi-batik" aria-hidden="true">
+        <svg style="width:100%;height:100%;position:absolute;inset:0" viewBox="0 0 1400 300" preserveAspectRatio="xMidYMid slice">
+        <defs>
+            <pattern id="paraing" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+            <path d="M0 80 L80 0" stroke="rgba(196,154,60,1)" stroke-width=".7" fill="none">
+                <animate attributeName="stroke-dashoffset" from="0" to="113" dur="8s" repeatCount="indefinite"/>
+            </path>
+            <path d="M-10 70 L70 -10" stroke="rgba(196,154,60,.5)" stroke-width=".4" fill="none" stroke-dasharray="4 4"/>
+            <path d="M10 90 L90 10" stroke="rgba(196,154,60,.5)" stroke-width=".4" fill="none" stroke-dasharray="4 4"/>
+            <circle cx="0" cy="80" r="3" fill="rgba(196,154,60,.7)"/>
+            <circle cx="80" cy="0" r="3" fill="rgba(196,154,60,.7)"/>
+            <circle cx="40" cy="40" r="2" fill="rgba(196,154,60,.4)"/>
+            </pattern>
+        </defs>
+        <rect width="1400" height="300" fill="url(#paraing)"/>
+        </svg>
+    </div>
+    <div class="testi-inner">
+        <p class="testi-label">Kata Pelanggan</p>
+        <p class="testi-q" id="tq">"Kain batik Pudjangga adalah yang pertama saya beli dan langsung menjadi favorit. Kualitasnya terasa seperti memiliki sepotong sejarah."</p>
+        <p class="testi-name" id="tn">— Rania Kusuma, Jakarta</p>
+        <div class="testi-dots">
+        <div class="tdot on" onclick="setT(0)"></div>
+        <div class="tdot" onclick="setT(1)"></div>
+        <div class="tdot" onclick="setT(2)"></div>
+        </div>
+    </div>
+    </div>
+
+    <div class="body-wrap">
+    <!-- FOOTER CTA -->
+    <section class="footer-cta reveal">
+        <h2 class="fcta-title">Kenakan<br><em>Warisanmu</em></h2>
+        <p class="fcta-sub">Hubungi kami — <a href="mailto:hello@pudjangga.id">hello@pudjangga.id</a></p>
+        <div class="fcta-btns">
+        <a href="#" class="btn-gold">Mulai Belanja <span style="font-size:15px">→</span></a>
+        <a href="#" style="display:inline-flex;align-items:center;gap:12px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;color:var(--parchment-dim);text-decoration:none;border:1px solid var(--border-strong);padding:14px 32px;border-radius:1px;transition:border-color .25s,color .25s">Lihat Koleksi Lengkap</a>
+        </div>
+        <div class="footer-bar">
+        <span>© 2025 Pudjangga. All rights reserved.</span>
+        <div class="footer-soc">
+            <a href="#">Instagram</a>
+            <a href="#">TikTok</a>
+            <a href="#">WhatsApp</a>
+        </div>
+        <span>Semarang, Jawa Tengah</span>
+        </div>
+    </section>
+    </div>
+
+    <script>
+    /* ── CURSOR ── */
+    const dot=document.getElementById('curDot');
+    const ring=document.getElementById('curRing');
+    let mx=0,my=0,rx=0,ry=0;
+    document.addEventListener('mousemove',e=>{
+    mx=e.clientX;my=e.clientY;
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+    });
+    (function anim(){
+    rx+=(mx-rx)*.11;ry+=(my-ry)*.11;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    requestAnimationFrame(anim);
+    })();
+    document.querySelectorAll('a,button').forEach(el=>{
+    el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));
+    el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));
+    });
+
+    /* ── HERO BATIK RINGS ── */
+    const ringsEl=document.getElementById('batikRings');
+    const ringSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    ringSvg.setAttribute('viewBox','0 0 1600 900');
+    ringSvg.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:1';
+    const ringData=[
+    [280,580,120,0],[240,540,180,1],[200,500,260,2],
+    [600,700,90,0.5],[560,660,150,1.5],
+    [380,400,70,1],[340,360,130,2.2]
+    ];
+    ringData.forEach(([cx,cy,r,delay])=>{
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',r);
+    c.setAttribute('fill','none');c.setAttribute('stroke','rgba(196,154,60,0.1)');c.setAttribute('stroke-width','1');
+    const a=document.createElementNS('http://www.w3.org/2000/svg','animate');
+    a.setAttribute('attributeName','r');
+    a.setAttribute('values',`${r};${r*1.07};${r}`);
+    a.setAttribute('dur','7s');a.setAttribute('begin',`${delay}s`);
+    a.setAttribute('repeatCount','indefinite');
+    c.appendChild(a);
+    ringSvg.appendChild(c);
+    });
+    ringsEl.appendChild(ringSvg);
+
+    /* ── HERO FLOATING DIAMONDS ── */
+    const dEl=document.getElementById('batikDiamonds');
+    const defs=[
+    [72,68,52],[200,140,36],[110,290,64],[260,90,44],[48,380,38],[180,340,58]
+    ];
+    defs.forEach(([l,t,s],i)=>{
+    const d=document.createElement('div');
+    d.style.cssText=`
+        position:absolute;left:${l}px;top:${t}px;
+        width:${s}px;height:${s}px;
+        border:1px solid rgba(196,154,60,${0.1+i*.02});
+        transform:rotate(45deg);
+        animation:floatDrift ${9+i*1.5}s ease-in-out ${i*.8}s infinite;
+    `;
+    dEl.appendChild(d);
+    /* Inner diamond */
+    const di=document.createElement('div');
+    di.style.cssText=`
+        position:absolute;inset:${s*.22}px;
+        border:1px solid rgba(196,154,60,${0.07+i*.015});
+    `;
+    d.appendChild(di);
+    });
+
+    /* ── MARQUEE CLONE ── */
+    const mt=document.getElementById('mtrack');
+    if(mt){const c=mt.cloneNode(true);mt.parentElement.appendChild(c)}
+
+    /* ── SCROLL REVEAL ── */
+    const ro=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')});
+    },{threshold:.1});
+    document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
+
+    /* ── TESTIMONIALS ── */
+    const Ts=[
+    {q:'"Kain batik Pudjangga adalah yang pertama saya beli dan langsung menjadi favorit. Kualitasnya terasa seperti memiliki sepotong sejarah."',n:'— Rania Kusuma, Jakarta'},
+    {q:'"Motif Mega Mendung yang saya pesan benar-benar memukau. Detail dan kerapian jahitannya luar biasa untuk harga yang sangat terjangkau."',n:'— Budi Santoso, Surabaya'},
+    {q:'"Saya bangga mengenakan batik Pudjangga ke acara internasional. Semua tamu kagum dengan motif dan kehalusan kainnya."',n:'— Dewi Lestari, Yogyakarta'}
+    ];
+    let ti=0;
+    function setT(i){
+    ti=i;
+    const tq=document.getElementById('tq'),tn=document.getElementById('tn');
+    tq.style.opacity='0';
+    setTimeout(()=>{tq.textContent=Ts[i].q;tn.textContent=Ts[i].n;tq.style.opacity='1'},300);
+    document.querySelectorAll('.tdot').forEach((d,j)=>d.classList.toggle('on',j===i));
+    }
+    setInterval(()=>setT((ti+1)%Ts.length),5500);
+
+    /* ── IMAGE FALLBACK ── */
+    document.querySelectorAll('img').forEach(img=>{
+    img.addEventListener('error',function(){
+        this.style.display='none';
+        const p=this.closest('.pcard-fill,.hero-panel,.ed-visual');
+        if(p) p.style.background='linear-gradient(135deg,#2A1F14 0%,#1A1208 50%,#2C2216 100%)';
+    });
+    });
+    </script>
+    </body>
+    </html>
